@@ -1,4 +1,5 @@
 ﻿using Windows.UI.Xaml.Controls;
+using TumblerApp.ViewModels;
 
 namespace TumblerApp.Samples
 {
@@ -7,6 +8,11 @@ namespace TumblerApp.Samples
         public CircleSample()
         {
             InitializeComponent();
+
+            this.LayoutRoot.Loaded += (sender, args) =>
+            {
+                this.DataContext = new MainViewModel();
+            };
         }
     }
 }
