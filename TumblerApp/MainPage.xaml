@@ -5,9 +5,20 @@
     xmlns:local="using:TumblerApp"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:TumblerApp.Controls"
+    xmlns:samples="using:TumblerApp.Samples"
+    xmlns:controls1="using:jci.glas.device.ui.Views.Controls"
     mc:Ignorable="d">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
+        
+        <StackPanel Orientation="Vertical">
+            <samples:CircleSample />
+            <samples:LoopListPage />
+        </StackPanel>
+        
+        
     </Grid>
 </Page>
+
