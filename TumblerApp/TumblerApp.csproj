@@ -119,6 +119,12 @@
     <None Include="TumblerApp_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\pic01.jpg" />
+    <Content Include="Assets\pic02.jpg" />
+    <Content Include="Assets\pic03.jpg" />
+    <Content Include="Assets\pic04.jpg" />
+    <Content Include="Assets\pic05.jpg" />
+    <Content Include="Assets\pic06.jpg" />
     <Content Include="Properties\Default.rd.xml" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\SplashScreen.scale-200.png" />
