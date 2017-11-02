@@ -4,7 +4,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media;
 
-namespace TumblerApp.Controls
+namespace TumblerApp.Views.Controls
 {
     public class CircleItemsPanel : Panel
     {

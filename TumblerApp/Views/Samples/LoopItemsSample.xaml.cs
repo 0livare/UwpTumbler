@@ -1,7 +1,7 @@
 ﻿using Windows.UI.Xaml.Controls;
 using TumblerApp.ViewModels;
 
-namespace TumblerApp.Samples
+namespace TumblerApp.Views.Samples
 {
     public sealed partial class LoopItemsSample : UserControl
     {

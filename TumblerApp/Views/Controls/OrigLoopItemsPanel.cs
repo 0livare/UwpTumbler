@@ -10,7 +10,7 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Animation;
 
-namespace TumblerApp.Controls
+namespace TumblerApp.Views.Controls
 {
     public class OrigLoopItemsPanel : Panel, INotifyPropertyChanged
     {
