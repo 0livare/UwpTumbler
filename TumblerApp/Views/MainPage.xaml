@@ -14,7 +14,7 @@
         <ScrollViewer>
             <StackPanel Orientation="Vertical">
                 <samples:LoopItemsSample />
-                <samples:CircleSample />
+<!--                <samples:CircleSample />-->
             </StackPanel>
         </ScrollViewer>
         

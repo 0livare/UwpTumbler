@@ -71,7 +71,7 @@
                      x:Name="MyListBox"
                      ItemsSource="{Binding Data}"
                      HorizontalContentAlignment="Center" 
-                     ItemTemplate="{StaticResource LoopListItem1}"
+                     ItemTemplate="{StaticResource LoopListItem2}"
                      HorizontalAlignment="Center" 
                      VerticalAlignment="Stretch"
                      Width="270" 
@@ -79,26 +79,47 @@
                      >
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate >
-                        <controls:LoopItemsPanel ShouldLoopChildren="True"/>
+                        <controls:LoopItemsPanel ShouldLoopChildren="False"
+                                                 SnapToItem="True"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
             </ListBox>
 
+            <!--
+            <ListBox Grid.Column="1"
+                     x:Name="MyListBox2"
+                     ItemsSource="{Binding Data}"
+                     HorizontalContentAlignment="Center"
+                     ItemTemplate="{StaticResource LoopListItem1}"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Stretch"
+                     Width="270"
+                     Height="700">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate >
+                        <ItemsStackPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ListBox>
+            -->
+
+            <!-- 
             <ItemsControl Visibility="Visible"  
-                          Grid.Column="1" 
-                          ItemsSource="{Binding Data}" 
-                          Background="White"
-                          ItemTemplate="{StaticResource LoopListItem2}" 
-                          HorizontalAlignment="Center" 
-                          VerticalAlignment="Stretch"
-                          Width="120"
-                          >
+                Grid.Column="1" 
+                ItemsSource="{Binding Data}" 
+                Background="White"
+                ItemTemplate="{StaticResource LoopListItem2}" 
+                HorizontalAlignment="Center" 
+                VerticalAlignment="Stretch"
+                Width="120"
+                >
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <controls:LoopItemsPanel ShouldLoopChildren="True"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
             </ItemsControl>
+            -->
 
             <!-- END PORTION OF INTEREST -->
 
@@ -132,7 +153,7 @@
                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="backButton" Storyboard.TargetProperty="Style">
                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SnappedBackButtonStyle}"/>
                         </ObjectAnimationUsingKeyFrames>
-                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="pageTitle" Storyboard.TargetProperty="Style">
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PageTitle" Storyboard.TargetProperty="Style">
                             <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SnappedPageHeaderTextStyle}"/>
                         </ObjectAnimationUsingKeyFrames>
                     </Storyboard>
@@ -141,3 +162,6 @@
         </VisualStateManager.VisualStateGroups>
     </Grid>
 </UserControl>
+
+
+

@@ -101,6 +101,7 @@
     <Compile Include="Views\Controls\Tumbler.xaml.cs">
       <DependentUpon>Tumbler.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Controls\TumblerPanel.cs" />
     <Compile Include="Views\MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
