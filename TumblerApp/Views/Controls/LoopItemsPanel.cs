@@ -227,9 +227,17 @@ namespace TumblerApp.Views.Controls
         }
 
 
-        public void ScrollToItem(int index, double duration = AnimationDurationInMillis)
+        public void ScrollToIndex(int index, double duration = AnimationDurationInMillis)
         {
-            //Log.d($"ScrollToItem: at index {index} in {duration} millis");
+
+            if (SelectedIndex != index)
+            {
+                // Setting this property will cause another invocation of this method
+                SelectedIndex = index;
+                return;
+            }
+
+            //Log.d($"ScrollToIndex: at index {index} in {duration} millis");
 
             if (!_templateApplied || index >= ChildCount || index < 0) return;
             UIElement selectedItem = Children[index];
@@ -293,6 +301,7 @@ namespace TumblerApp.Views.Controls
             _sliderVertical.ValueChanged += AnimationSliderValueChanged;
 
             storyboard.Begin();
+            //Log.d($"Started animation from {fromOffset} to {toOffset}");
         }
 
         /// <summary>
@@ -496,7 +505,7 @@ namespace TumblerApp.Views.Controls
             //            UpdatePositionsWithAnimation(startOffset, endOffset, AnimationDuration);
 
             int index = IsMovingUp ? 0 : ChildCount - 1;
-            ScrollToItem(index, AnimationDurationInMillis);
+            ScrollToIndex(index, AnimationDurationInMillis);
 
             _hasScrolledPastEnd = false;
         }
@@ -566,7 +575,7 @@ namespace TumblerApp.Views.Controls
             new PropertyMetadata(0, (sender, args) =>
             {
                 var panel = (LoopItemsPanel) sender;
-                panel.ScrollToItem(panel.SelectedIndex);
+                panel.ScrollToIndex(panel.SelectedIndex);
             }));
 
         /// <summary>
