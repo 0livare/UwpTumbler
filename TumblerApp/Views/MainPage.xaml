@@ -15,6 +15,24 @@
             <StackPanel Orientation="Vertical">
                 <samples:LoopItemsSample />
 <!--                <samples:CircleSample />-->
+
+                <Line X2="1000"
+                      Stroke="Red"
+                      StrokeThickness="2"
+                      >
+                    <Line.RenderTransform>
+                        <TranslateTransform Y="-405" />
+                    </Line.RenderTransform>
+                </Line>
+
+                <Line X2="1000"
+                      Stroke="Red"
+                      StrokeThickness="2"
+                      >
+                    <Line.RenderTransform>
+                        <TranslateTransform Y="-288" />
+                    </Line.RenderTransform>
+                </Line>
             </StackPanel>
         </ScrollViewer>
         
