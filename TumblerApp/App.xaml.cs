@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
+using TumblerApp.Util;
 
 namespace TumblerApp
 {
@@ -22,6 +24,16 @@ namespace TumblerApp
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+
+            #if DEBUG && !DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION
+            UnhandledException += (sender, args) =>
+            {
+                Log.d("\n\nUNHANDLED EXCEPTION BREAK!!");
+                Log.e(args.Exception);
+                Log.d($"Stacktrace:\n{args.Exception.StackTrace ?? "\tis unavilable"}");
+                if (Debugger.IsAttached) Debugger.Break();
+            };
+            #endif
         }
 
         /// <summary>

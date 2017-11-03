@@ -11,7 +11,7 @@ using TumblerApp.Util;
 
 namespace TumblerApp.Views.Controls
 {
-    public class LoopItemsPanel : Panel
+    public class LoopItemsPanel : TumblerApp.Views.Controls.Examples.VirtualizingPanel
     {
         /// <summary>The time it takes to move to a new element</summary>
         private const double AnimationDurationInMillis = 200;
@@ -49,9 +49,12 @@ namespace TumblerApp.Views.Controls
 
         public LoopItemsPanel()
         {
+            Log.d($"Constructor");
             ManipulationMode = (ManipulationModes.TranslateY | ManipulationModes.TranslateInertia);
             ManipulationDelta += OnManipulationDelta;
             ManipulationCompleted += OnManipulationCompleted;
+
+            Tapped -= OnTapped;
             Tapped += OnTapped;
 
             _sliderVertical = new Slider
@@ -59,10 +62,37 @@ namespace TumblerApp.Views.Controls
                 SmallChange = 0.0000000001,
                 Minimum = double.MinValue,
                 Maximum = double.MaxValue,
-                StepFrequency = 0.0000000001
+                StepFrequency = 0.0000000001,
             };
             _sliderVertical.ValueChanged += AnimationSliderValueChanged;
+
+            Loaded += (sender, args) =>
+            {
+                Log.d($"Loaded!");
+                DumpGeneratorContent();
+            };
         }
+
+
+        private void DumpGeneratorContent()
+        {
+            ItemContainerGenerator generator = this.ItemContainerGenerator;
+            ItemsControl itemsControl = ItemsControl.GetItemsOwner(this);
+
+            Log.d("Generator positions:");
+
+            for (int i = 0; i < itemsControl.Items.Count; i++)
+            {
+                GeneratorPosition position = generator.GeneratorPositionFromIndex(i);
+                Log.d($"Item index={i} " +
+                      $"Generator position: \t" +
+                          $"index={position.Index}, \t" +
+                          $"offset={position.Offset}");
+            }
+
+            Log.d("\n");
+        }
+
 
         #region Properties
         private bool IsMovingUp => _offsetFromInitialPosition > 0;
@@ -196,7 +226,7 @@ namespace TumblerApp.Views.Controls
             if (Children == null || Children.Count == 0) return;
 
             double tappedPointY = args.GetPosition(this).Y;
-            //Log.d($"OnTapped: tapped at Y position {tappedPointY}");
+            Log.d($"OnTapped: tapped at Y position {tappedPointY}");
 
             foreach (UIElement child in Children)
             {
@@ -210,10 +240,55 @@ namespace TumblerApp.Views.Controls
 
                 if (childVerticallyIntersectsTapPoint)
                 {
-                    ScrollToItem(child, childBoundsInThisPanel);
+                    //ScrollToItem(child, childBoundsInThisPanel);
+
+                    for (int i = 0; i < Children.Count; ++i)
+                    {
+                        if (Children[i] != child) continue;
+
+                        if (IsVirtualizedAt(i + 1)) RealizeAt(i + 1);
+                        else VirtualizeAt(i + 1);
+
+                        DumpGeneratorContent();
+                        break;
+                    }
                     break;
                 }
             }
+
+            args.Handled = true;
+        }
+
+        private bool IsVirtualizedAt(int index)
+        {
+            GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(index);
+            return pos.Offset != 0;
+        }
+
+
+        private void VirtualizeAt(int index)
+        {
+            Log.d($"About to remove index {index}");
+            if (IsVirtualizedAt(index)) return;
+
+            GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(index);
+            Children.RemoveAt(pos.Index);
+            ItemContainerGenerator.Remove(pos, 1);
+        }
+
+        private void RealizeAt(int index)
+        {
+            Log.d($"About to restore index {index}");
+
+            GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(index);
+            ItemContainerGenerator.StartAt(pos, GeneratorDirection.Forward, true);
+
+            DependencyObject child = ItemContainerGenerator.GenerateNext(out bool isNewlyRealized);
+            Log.d("isNewlyRealized = " + isNewlyRealized);
+            ItemContainerGenerator.PrepareItemContainer(child);
+
+            ItemContainerGenerator.Stop();
+            Children.Add(child as UIElement);
         }
 
         /// <summary>
@@ -227,9 +302,10 @@ namespace TumblerApp.Views.Controls
         }
 
 
-        public void ScrollToIndex(int index, double duration = AnimationDurationInMillis)
+        public void ScrollToIndex(
+            int index, 
+            TimeSpan duration = default(TimeSpan))
         {
-
             if (SelectedIndex != index)
             {
                 // Setting this property will cause another invocation of this method
@@ -254,7 +330,10 @@ namespace TumblerApp.Views.Controls
         ///     The rectangular bounds of selectedItem, relative to this panel.
         /// </param>
         /// <param name="duration">The amount of time in milliseconds to take to animate to the passed item</param>
-        private void ScrollToItem(UIElement selectedItem, Rect childBoundsInThisPanel, double duration = AnimationDurationInMillis)
+        private void ScrollToItem(
+            UIElement selectedItem, 
+            Rect childBoundsInThisPanel, 
+            TimeSpan duration = default(TimeSpan))
         {
             if (!_templateApplied) return;
 
@@ -262,13 +341,15 @@ namespace TumblerApp.Views.Controls
             var transform = (TranslateTransform)selectedItem.RenderTransform;
             if (transform == null) return;
 
-            double centerTopOffset = (ActualHeight / 2d) - (ChildHeight) / 2d;
-            double deltaOffset = centerTopOffset - childBoundsInThisPanel.Y;
+            double selectedItemLocationTop = ActualHeight / 2d - ChildHeight / 2d;
+            double itemCurrentTop = childBoundsInThisPanel.Y;
+            double distanceToPutItemInSelectedLocation = selectedItemLocationTop - itemCurrentTop;
 
+            TimeSpan durationToUse = (duration == default(TimeSpan)) ? AnimationDuration : duration;
             UpdatePositionsWithAnimation(
                 transform.Y,
-                transform.Y + deltaOffset, 
-                AnimationDuration);
+                transform.Y + distanceToPutItemInSelectedLocation,
+                durationToUse);
         }
 
         /// <summary>
@@ -505,7 +586,7 @@ namespace TumblerApp.Views.Controls
             //            UpdatePositionsWithAnimation(startOffset, endOffset, AnimationDuration);
 
             int index = IsMovingUp ? 0 : ChildCount - 1;
-            ScrollToIndex(index, AnimationDurationInMillis);
+            ScrollToIndex(index, AnimationDuration);
 
             _hasScrolledPastEnd = false;
         }
