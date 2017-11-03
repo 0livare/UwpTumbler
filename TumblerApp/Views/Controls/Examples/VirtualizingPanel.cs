@@ -30,31 +30,26 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 
-namespace TumblerApp.Views.Controls
+namespace TumblerApp.Views.Controls.Examples
 {
-
     public abstract class VirtualizingPanel : Panel
     {
-        ItemContainerGenerator generator;
-
+        private ItemContainerGenerator _generator;
         public ItemContainerGenerator ItemContainerGenerator
         {
             get
             {
-                if (generator == null)
-                {
-                    ItemsControl owner = ItemsControl.GetItemsOwner(this);
-                    if (owner == null)
-                        throw new InvalidOperationException("VirtualizingPanels must be in the Template of an ItemsControl in order to generate items");
-                    generator = owner.ItemContainerGenerator;
-                    generator.ItemsChanged += OnItemsChangedInternal;
-                }
-                return generator;
-            }
-        }
+                if (_generator != null) return _generator;
 
-        protected VirtualizingPanel()
-        {
+                ItemsControl owner = ItemsControl.GetItemsOwner(this);
+                if (owner == null)
+                    throw new InvalidOperationException(
+                        "VirtualizingPanels must be in the Template of an ItemsControl in order to generate items");
+
+                _generator = owner.ItemContainerGenerator;
+                _generator.ItemsChanged += OnItemsChangedInternal;
+                return _generator;
+            }
         }
 
         protected void AddInternalChild(UIElement child)
@@ -69,20 +64,18 @@ namespace TumblerApp.Views.Controls
 
         protected void RemoveInternalChildRange(int index, int range)
         {
-            for (int i = 0; i < range; i++)
+            for (var i = 0; i < range; i++)
+            {
                 Children.RemoveAt(index);
+            }
         }
 
-        protected virtual void BringIndexIntoView(int index)
-        {
-        }
+        protected virtual void BringIndexIntoView(int index) { }
 
-        protected virtual void OnClearChildren()
-        {
-        }
+        protected virtual void OnClearChildren() { }
 
-        internal void OnItemsChangedInternal(
-            object sender, 
+        private void OnItemsChangedInternal(
+            object sender,
             ItemsChangedEventArgs args)
         {
             InvalidateMeasure();
@@ -97,9 +90,7 @@ namespace TumblerApp.Views.Controls
         }
 
         protected virtual void OnItemsChanged(
-            object sender, 
-            ItemsChangedEventArgs args)
-        {
-        }
+            object sender,
+            ItemsChangedEventArgs args) {}
     }
 }
