@@ -318,7 +318,7 @@ namespace TumblerApp.Views.Controls
         ///     This method will be called a large number of times while
         ///     the user is in the middle of their swipe.
         /// </summary>
-        protected virtual void OnManipulationDelta(
+        private void OnManipulationDelta(
             object sender, 
             ManipulationDeltaRoutedEventArgs e)
         {
@@ -377,8 +377,12 @@ namespace TumblerApp.Views.Controls
 
             _hasScrolledPastEnd = currentOffset > maxAllowedOffset;
             UpdatePositions(offsetDelta);
+            OnScrolled(offsetDelta);
+
             //Log.d($"\thas scrolled past end => {currentOffset} > {maxAllowedOffset} => {_hasScrolledPastEnd}");
         }
+
+        protected virtual void OnScrolled(double movedBy) { }
 
         /// <summary>
         ///     Increments the current offset by offsetDelta and updates the positions of all children
