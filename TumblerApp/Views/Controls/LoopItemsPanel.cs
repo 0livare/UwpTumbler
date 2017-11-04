@@ -336,7 +336,7 @@ namespace TumblerApp.Views.Controls
             double maxAllowedOffset = offsetToEndOfList + AllowedDistancePastEnd;
 
             //Log.d($"\t offsetDelta = {offsetDelta}");
-            //Log.d($"\t OffsetFromInitialPosition = {_offsetFromInitialPosition}");
+            //Log.d($"\t OffsetFromInitialPosition = {OffsetFromInitialPosition}");
             //Log.d($"\t maxAllowedOffset = {maxAllowedOffset}");
 
             if (ShouldLoopChildren)
@@ -452,9 +452,13 @@ namespace TumblerApp.Views.Controls
             for (int i = startIndex; i < endIndex; ++i)
             {
                 UIElement child = Children[i];
-                var transform = (TranslateTransform)child.RenderTransform;
 
-                if (transform == null) continue;
+                var transform = child.RenderTransform as TranslateTransform;
+                if (transform == null)
+                {
+                    child.RenderTransform = transform = new TranslateTransform();
+                }
+
                 transform.Y = offset;
             }
         }

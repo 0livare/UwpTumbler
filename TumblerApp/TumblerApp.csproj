@@ -95,6 +95,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Util\StringUtil.cs" />
     <Compile Include="Views\Controls\CircleItemsPanel.cs" />
     <Compile Include="Views\Controls\Virtualization\VirtualizingLoopItemsPanel.cs" />
     <Compile Include="Views\Controls\LoopItemsPanel.cs" />
