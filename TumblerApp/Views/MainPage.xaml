@@ -1,0 +1,42 @@
+﻿<Page
+    x:Name="LayoutRoot"
+    x:Class="TumblerApp.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TumblerApp"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:samples="using:TumblerApp.Views.Samples"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+        <ScrollViewer>
+            <StackPanel Orientation="Vertical">
+                <samples:LoopItemsSample />
+<!--                <samples:CircleSample />-->
+
+                <Line X2="1000"
+                      Stroke="Red"
+                      StrokeThickness="2"
+                      >
+                    <Line.RenderTransform>
+                        <TranslateTransform Y="-405" />
+                    </Line.RenderTransform>
+                </Line>
+
+                <Line X2="1000"
+                      Stroke="Red"
+                      StrokeThickness="2"
+                      >
+                    <Line.RenderTransform>
+                        <TranslateTransform Y="-288" />
+                    </Line.RenderTransform>
+                </Line>
+            </StackPanel>
+        </ScrollViewer>
+        
+        
+    </Grid>
+</Page>
+

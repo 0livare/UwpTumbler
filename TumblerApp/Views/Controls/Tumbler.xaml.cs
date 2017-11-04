@@ -1,7 +1,7 @@
 ﻿using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
-namespace jci.glas.device.ui.Views.Controls
+namespace TumblerApp.Views.Controls
 {
     public sealed partial class Tumbler : UserControl
     {

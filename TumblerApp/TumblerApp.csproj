@@ -95,21 +95,24 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\CircleItemsPanel.cs" />
-    <Compile Include="Controls\LoopItemsPanel.cs" />
-    <Compile Include="Controls\OrigLoopItemsPanel.cs" />
-    <Compile Include="Controls\Tumbler.xaml.cs">
+    <Compile Include="Views\Controls\CircleItemsPanel.cs" />
+    <Compile Include="Views\Controls\LoopItemsPanel.cs" />
+    <Compile Include="Views\Controls\OrigLoopItemsPanel.cs" />
+    <Compile Include="Views\Controls\Tumbler.xaml.cs">
       <DependentUpon>Tumbler.xaml</DependentUpon>
     </Compile>
-    <Compile Include="MainPage.xaml.cs">
+    <Compile Include="Views\Controls\TumblerPanel.cs" />
+    <Compile Include="Views\MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Util\Log.cs" />
+    <Compile Include="Util\ThreadUtil.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Samples\CircleSample.xaml.cs">
+    <Compile Include="Views\Samples\CircleSample.xaml.cs">
       <DependentUpon>CircleSample.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Samples\LoopItemsSample.xaml.cs">
+    <Compile Include="Views\Samples\LoopItemsSample.xaml.cs">
       <DependentUpon>LoopItemsSample.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
@@ -140,19 +143,19 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Page Include="Controls\Tumbler.xaml">
+    <Page Include="Views\Controls\Tumbler.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="MainPage.xaml">
+    <Page Include="Views\MainPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Samples\CircleSample.xaml">
+    <Page Include="Views\Samples\CircleSample.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Samples\LoopItemsSample.xaml">
+    <Page Include="Views\Samples\LoopItemsSample.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

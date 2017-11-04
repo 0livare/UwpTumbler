@@ -1,7 +1,8 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Windows.Foundation;
-using Windows.System.Threading;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -9,21 +10,16 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Animation;
 
-namespace jci.glas.device.ui.Views.Controls
+namespace TumblerApp.Views.Controls
 {
-    public class LoopItemsPanel : Panel
+    public class OrigLoopItemsPanel : Panel, INotifyPropertyChanged
     {
         /// <summary>The time it takes to move to a new element</summary>
-        private const double AnimationDurationMillis = 200;
+        private static readonly TimeSpan AnimationDuration = TimeSpan.FromMilliseconds(600);
         /// <summary>Slider control used to make animating easier</summary>
         private readonly Slider sliderVertical;
         /// <summary>Separating offset</summary>
         private double OffsetFromInitialPosition { get; set; }
-        /// <summary>
-        /// A timer used to ensure that scrolling to the selected item 
-        /// only happens in the last invocation of ArrangeOverride 
-        /// </summary>
-        private ThreadPoolTimer delayScrollingTimer;
 
         /// <summary>
         /// Height of an arbitrary child.  This assumes that all children 
@@ -37,6 +33,9 @@ namespace jci.glas.device.ui.Views.Controls
             {
                 if (value - _childHeight == 0) return;
                 _childHeight = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(AboveCenterChild));
+                OnPropertyChanged(nameof(BelowCenterChild));
             }
         }
 
@@ -50,7 +49,7 @@ namespace jci.glas.device.ui.Views.Controls
         private int ShownChildCount => (ChildrenToShow < 1) ? ChildCount : ChildrenToShow;
 
 
-        public LoopItemsPanel()
+        public OrigLoopItemsPanel()
         {
             ManipulationMode = (ManipulationModes.TranslateY | ManipulationModes.TranslateInertia);
             ManipulationDelta += OnManipulationDelta;
@@ -68,27 +67,7 @@ namespace jci.glas.device.ui.Views.Controls
         }
 
         /// <summary>
-        /// Call each child's Measure() method to update its DesiredSize
-        /// </summary>
-        protected override Size MeasureOverride(Size availableSize)
-        {
-            Size baseSize = base.MeasureOverride(availableSize);
-
-            var infinity = new Size(double.PositiveInfinity, double.PositiveInfinity);
-            foreach (UIElement child in Children) child.Measure(infinity);
-
-            Size firstChildSize = Children[0]?.DesiredSize ?? new Size(0,0);
-            ChildHeight = firstChildSize.Height;
-            Clip = new RectangleGeometry { Rect = new Rect(0, 0, baseSize.Width, baseSize.Height) };
-
-            return firstChildSize;
-        }
-
-        /// <summary>
-        /// Arrange all items.  Called after MeasureOverride.
-        /// 
-        /// This method is where each child is explicitly given a TranslateTransform
-        /// so that they can be vertically moved.
+        /// Arrange all items
         /// </summary>
         protected override Size ArrangeOverride(Size finalSize)
         {
@@ -120,22 +99,9 @@ namespace jci.glas.device.ui.Views.Controls
             }
 
             TemplateApplied = true;
-
-            /* ScrollToItem must be called in this method so that the proper 
-             * item remains selected when the window is resized.  But it's a 
-             * waste to call it every time this method is called when resizing
-             * (because that's a lot =p) */
-            delayScrollingTimer?.Cancel();
-            //delayScrollingTimer = ThreadUtil.SetTimeoutUI(() => ScrollToItem(SelectedIndex, 0), 5);
-
             return finalSize;
         }
 
-        /// <summary>
-        ///     Get the top offset of the first child so that all of the children collectively
-        ///     will be properly vertically aligned in this panel (Top, Center, Bottom).
-        /// </summary>
-        /// <param name="parentSize">The current size of this panel</param>
         private double GetFirstChildTopOffset(Size parentSize)
         {
             if (VerticalContentAlignment != VerticalAlignment.Center &&
@@ -148,13 +114,6 @@ namespace jci.glas.device.ui.Views.Controls
                 : parentSize.Height - totalChildHeight;
         }
 
-        /// <summary>
-        ///     Get the left offset of any child based on the current value of 
-        ///     HorizontalContentAlignment (Left, Center, Right)
-        /// </summary>
-        /// <param name="parentSize">The current size of this panel</param>
-        /// <param name="childSize">The current size of the child to be aligned</param>
-        /// <returns>The proper left offset to correctly align the child in question</returns>
         private double GetChildLeftOffset(Size parentSize, Size childSize)
         {
             switch (HorizontalContentAlignment)
@@ -169,6 +128,26 @@ namespace jci.glas.device.ui.Views.Controls
             }
         }
 
+        /// <summary>
+        /// Call each child's Measure() method to update its DesiredSize
+        /// </summary>
+        protected override Size MeasureOverride(Size availableSize)
+        {
+            Size baseSize = base.MeasureOverride(availableSize);
+
+            var infinity = new Size(double.PositiveInfinity, double.PositiveInfinity);
+            foreach (UIElement child in Children) child.Measure(infinity);
+
+            if (Children[0] != null) ChildHeight = Children[0].DesiredSize.Height;
+
+            double clipHeight = (ChildrenToShow < 1)
+                ? baseSize.Height
+                : Math.Min(ShownChildCount * ChildHeight, baseSize.Height);
+            Clip = new RectangleGeometry { Rect = new Rect(0, 0, baseSize.Width, clipHeight) };
+
+            return baseSize;
+        }
+
         private void OnTapped(object sender, TappedRoutedEventArgs args)
         {
             if (Children == null || Children.Count == 0) return;
@@ -176,38 +155,23 @@ namespace jci.glas.device.ui.Views.Controls
             double tappedPointY = args.GetPosition(this).Y;
             foreach (UIElement child in Children)
             {
-                Rect childBoundsInThisPanel = GetChildBoundsInThisPanel(child);
+                GeneralTransform toThisPanelCoordPlaneMap = child.TransformToVisual(this);
+                var childDesiredSize = new Rect(0, 0, child.DesiredSize.Width, child.DesiredSize.Height);
+                Rect childBoundsInThisPanel = toThisPanelCoordPlaneMap.TransformBounds(childDesiredSize);
+
                 double childBottom = childBoundsInThisPanel.Y;
                 double childTop = childBoundsInThisPanel.Y + childBoundsInThisPanel.Height;
 
                 bool childVerticallyIntersectsTapPoint = childBottom <= tappedPointY && tappedPointY <= childTop;
                 if (childVerticallyIntersectsTapPoint)
                 {
-                    ScrollToItem(child, childBoundsInThisPanel);
+                    ScrollToSelectedIndex(child, childBoundsInThisPanel);
                     break;
                 }
             }
         }
 
-        /// <summary>
-        /// Get the childs bounding rectangle relaive to this panel
-        /// </summary>
-        private Rect GetChildBoundsInThisPanel(UIElement child)
-        {
-            GeneralTransform toThisPanelCoordPlaneMap = child.TransformToVisual(this);
-            var childDesiredBounds = new Rect(0, 0, child.DesiredSize.Width, child.DesiredSize.Height);
-            return toThisPanelCoordPlaneMap.TransformBounds(childDesiredBounds);
-        }
-
-        /// <summary>
-        /// Scroll to a particular child item
-        /// </summary>
-        /// <param name="selectedItem">The child to be scrolled to</param>
-        /// <param name="childBoundsInThisPanel">
-        /// The rectangular bounds of selectedItem, relative to this panel.
-        /// </param>
-        /// <param name="duration">The amount of time in milliseconds to take to animate to the passed item</param>
-        private void ScrollToItem(UIElement selectedItem, Rect childBoundsInThisPanel, double duration = AnimationDurationMillis)
+        private void ScrollToSelectedIndex(UIElement selectedItem, Rect childBoundsInThisPanel)
         {
             if (!TemplateApplied) return;
 
@@ -218,27 +182,13 @@ namespace jci.glas.device.ui.Views.Controls
             double centerTopOffset = (ActualHeight / 2d) - (ChildHeight) / 2d;
             double deltaOffset = centerTopOffset - childBoundsInThisPanel.Y;
 
-            UpdatePositionsWithAnimation(transform.Y, transform.Y + deltaOffset, duration);
-        }
-
-        public void ScrollToItem(int index, double duration = AnimationDurationMillis)
-        {
-            if (!TemplateApplied || index >= ChildCount || index < 0) return;
-            UIElement selectedItem = Children[index];
-            if (selectedItem == null) return;
-
-            ScrollToItem(selectedItem, GetChildBoundsInThisPanel(selectedItem), duration);
+            UpdatePositionsWithAnimation(transform.Y, transform.Y + deltaOffset);
         }
 
         /// <summary>
-        ///     Update the current positions of all elements to a certain new offset
-        ///     with a nice animation.
-        /// 
-        ///     This method is used only when the user is not dragging.  For example, 
-        ///     when the user taps on on element or after they drag and do not exactly
-        ///     center one child so we "snap" to the closest child.
+        /// Updating with an animation (after a tap)
         /// </summary>
-        private void UpdatePositionsWithAnimation(double fromOffset, double toOffset, double duration)
+        private void UpdatePositionsWithAnimation(double fromOffset, double toOffset)
         {
             var storyboard = new Storyboard();
             var animationSnap = new DoubleAnimation
@@ -246,7 +196,7 @@ namespace jci.glas.device.ui.Views.Controls
                 EnableDependentAnimation = true,
                 From = fromOffset,
                 To = toOffset,
-                Duration = TimeSpan.FromMilliseconds(duration),
+                Duration = AnimationDuration,
                 EasingFunction = new ExponentialEase { EasingMode = EasingMode.EaseInOut }
             };
 
@@ -267,51 +217,25 @@ namespace jci.glas.device.ui.Views.Controls
             UpdatePositions(e.NewValue - e.OldValue);
         }
 
+        /// <summary>
+        /// On manipulation delta
+        /// </summary>
         private void OnManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
         {
             if (e == null) return;
             Point translation = e.Delta.Translation;
-
-            double offsetDelta = translation.Y / 2;
-
-            // The absolute top or bottom of the list.  An offset greater than this will
-            // scroll beyond all items
-            double offsetToEndOfList = ChildHeight * (ChildCount - 1) / 2;
-
-            //            Log.d($"\t offsetDelta = {offsetDelta}");
-            //            Log.d($"\t maxOffset = {maxOffset}");
-            //            Log.d($"\t OffsetFromInitialPosition   = {OffsetFromInitialPosition}");
-
-            // Allow the user to scroll a small amount past the end of the items, so that scrolling 
-            // back to the end item looks natural instead of only moving a few pixels.
-            double allowedDistancePastEnd = ChildHeight;
-
-            // Prevent scrolling past end of items
-            double currentOffset = Math.Abs(OffsetFromInitialPosition + offsetDelta);
-            double maxAllowedOffset = offsetToEndOfList + allowedDistancePastEnd;
-            if (!ShouldLoopChildren && currentOffset > maxAllowedOffset) return;
-
-            UpdatePositions(offsetDelta);
+            UpdatePositions(translation.Y / 2);
         }
 
         /// <summary>
-        /// Increments the current offset by offsetDelta and updates the positions of all children
-        /// to this new offset.  
-        /// 
-        /// This method contains the logic for "looping" the children from one
-        /// end of the container to the other if ShouldLoopChildren is true.
+        /// Updating position
         /// </summary>
         private void UpdatePositions(double offsetDelta)
         {
             double maxLogicalHeight = ShownChildCount * ChildHeight;
-            OffsetFromInitialPosition = (OffsetFromInitialPosition + offsetDelta) % maxLogicalHeight;
 
-            if (!ShouldLoopChildren)
-            {
-                // Update all items to new offset
-                UpdatePositionsForIndices(0, ChildCount, OffsetFromInitialPosition);
-                return;
-            }
+            // Reaffect correct offsetSeparator
+            OffsetFromInitialPosition = (OffsetFromInitialPosition + offsetDelta) % maxLogicalHeight;
 
             // Get the correct number item
             var itemNumberSeparator = (int)(Math.Abs(OffsetFromInitialPosition) / ChildHeight);
@@ -337,7 +261,7 @@ namespace jci.glas.device.ui.Views.Controls
              * This causes odd behavior where the items shift upward because the item that is supposed 
              * be displayed on the bottom instead moves above the top item.
              * 
-             * Address this by checking for an offset that is a multiple of the child height and 
+             * Address this buy checking for an offset that is a multiple of the child height and 
              * properly adjusting the indexToMove.  This will only happen on the final call because 
              * the first call will already have some movement happening (a small offset).
              */
@@ -347,16 +271,16 @@ namespace jci.glas.device.ui.Views.Controls
             }
 
             // Items that must be before
-            UpdatePositionsForIndices(indexToMove, ChildCount, offsetBefore);
+            UpdatePosition(indexToMove, ChildCount, offsetBefore);
 
             // Items that must be after
-            UpdatePositionsForIndices(0, indexToMove, offsetAfter);
+            UpdatePosition(0, indexToMove, offsetAfter);
         }
 
         /// <summary>
         /// Translate items to a new offset
         /// </summary>
-        private void UpdatePositionsForIndices(int startIndex, int endIndex, double offset)
+        private void UpdatePosition(int startIndex, int endIndex, double offset)
         {
             for (int i = startIndex; i < endIndex; ++i)
             {
@@ -369,35 +293,15 @@ namespace jci.glas.device.ui.Views.Controls
         }
 
 
-        /// <summary>
-        /// When a user drag completes, if SnapToItem is true, we need to snap to
-        /// the child which is currently closest to the center of the container.
-        /// </summary>
         private void OnManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs args)
         {
-            if (!SnapToItem) return;
 
-            int closestIndex = -1;
-            var closestTopToCenter = double.MaxValue;
-
-            for (int i = 0; i < ChildCount; ++i)
-            {
-                UIElement child = Children[i];
-                Rect childBoundsInThisPanel = GetChildBoundsInThisPanel(child);
-                double childDistanceFromCenter = Math.Abs(AboveCenterChild - childBoundsInThisPanel.Y);
-//                Log.d($"Child at index {i} is {childDistanceFromCenter} units away from center");
-
-                if (childDistanceFromCenter < closestTopToCenter)
-                {
-                    closestTopToCenter = childDistanceFromCenter;
-                    closestIndex = i;
-//                    Log.d($"Index {i} is the closest so far with a value of {GetTextFromChild(closestToCenter)}");
-                }
-            }
-
-//            Log.d($"Scrolling to closest index {closestIndex} with a value of {GetTextFromChild(closestToCenter)}");
-            SelectedIndex = closestIndex;
         }
+
+
+
+
+
 
         #region Dependency Properties
 
@@ -409,7 +313,7 @@ namespace jci.glas.device.ui.Views.Controls
 
         // Using a DependencyProperty as the backing store for HorizontalContentAlignment.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty HorizontalContentAlignmentProperty =
-            DependencyProperty.Register("HorizontalContentAlignment", typeof(HorizontalAlignment), typeof(LoopItemsPanel),
+            DependencyProperty.Register("HorizontalContentAlignment", typeof(HorizontalAlignment), typeof(OrigLoopItemsPanel),
                 new PropertyMetadata(HorizontalAlignment.Center));
 
 
@@ -421,7 +325,7 @@ namespace jci.glas.device.ui.Views.Controls
 
         // Using a DependencyProperty as the backing store for VerticalContentAlignment.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty VerticalContentAlignmentProperty =
-            DependencyProperty.Register("VerticalContentAlignment", typeof(VerticalAlignment), typeof(LoopItemsPanel),
+            DependencyProperty.Register("VerticalContentAlignment", typeof(VerticalAlignment), typeof(OrigLoopItemsPanel),
                 new PropertyMetadata(HorizontalAlignment.Center));
 
         public int ChildrenToShow
@@ -432,52 +336,17 @@ namespace jci.glas.device.ui.Views.Controls
 
         // Using a DependencyProperty as the backing store for ChildrenToShow.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty ChildrenToShowProperty =
-            DependencyProperty.Register("ChildrenToShow", typeof(int), typeof(LoopItemsPanel),
+            DependencyProperty.Register("ChildrenToShow", typeof(int), typeof(OrigLoopItemsPanel),
                 new PropertyMetadata(-1));
 
-        /// <summary>
-        /// Whether or not to loop the children from one end of the container to the other for an infinite scroll.
-        /// </summary>
-        public bool ShouldLoopChildren
-        {
-            get { return (bool)GetValue(ShouldLoopChildrenProperty); }
-            set { SetValue(ShouldLoopChildrenProperty, value); }
-        }
-        // Using a DependencyProperty as the backing store for ShouldLoopChildren.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty ShouldLoopChildrenProperty =
-            DependencyProperty.Register("ShouldLoopChildren", typeof(bool), typeof(LoopItemsPanel),
-                new PropertyMetadata(false));
 
-        /// <summary>
-        /// The child that is currently selected, in the center of this panel.
-        /// </summary>
-        public int SelectedIndex
-        {
-            get { return (int)GetValue(SelectedIndexProperty); }
-            set { SetValue(SelectedIndexProperty, value); }
-        }
-        // Using a DependencyProperty as the backing store for SelectedIndex.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty SelectedIndexProperty =
-            DependencyProperty.Register("SelectedIndex", typeof(int), typeof(LoopItemsPanel),
-                new PropertyMetadata(0, (sender, args) =>
-                {
-                    var panel = (LoopItemsPanel) sender;
-                    panel.ScrollToItem(panel.SelectedIndex);
-                }));
-
-        /// <summary>
-        /// Whether or not the panel should snap so that when a user's drag stops some item is 
-        /// always directly in the center of (selected in) this panel.
-        /// </summary>
-        public bool SnapToItem
-        {
-            get { return (bool)GetValue(SnapToItemProperty); }
-            set { SetValue(SnapToItemProperty, value); }
-        }
-        // Using a DependencyProperty as the backing store for SnapToItem.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty SnapToItemProperty =
-            DependencyProperty.Register("SnapToItem", typeof(bool), typeof(LoopItemsPanel),
-                new PropertyMetadata(true));
         #endregion Dependency Properties
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }

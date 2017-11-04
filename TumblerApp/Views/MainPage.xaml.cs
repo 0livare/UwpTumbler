@@ -1,7 +1,6 @@
 ﻿using Windows.UI.Xaml.Controls;
-using TumblerApp.ViewModels;
 
-namespace TumblerApp
+namespace TumblerApp.Views
 {
     public sealed partial class MainPage : Page
     {
