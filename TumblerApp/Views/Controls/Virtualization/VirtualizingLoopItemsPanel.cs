@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using Windows.Foundation;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -51,6 +52,7 @@ namespace TumblerApp.Views.Controls.Virtualization
         #endregion Virtualization Core
 
         private double _lastCalculatedRealizationRangeAtOffset;
+        private bool _isInitialVirtualizationComplete;
 
         private IndexRange _realizationRange;
         private IndexRange RealizationRange
@@ -63,10 +65,17 @@ namespace TumblerApp.Views.Controls.Virtualization
             }
         }
 
-        public VirtualizingLoopItemsPanel() { Loaded += OnLoaded; }
-
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        public VirtualizingLoopItemsPanel()
         {
+        }
+
+        protected override Size ArrangeOverride(Size finalSize)
+        {
+            finalSize = base.ArrangeOverride(finalSize);
+            if (_isInitialVirtualizationComplete || !Children.Any()) return finalSize;
+
+            int c = Children.Count;
+
             RealizationRange = CalculateCurrentRealizationRange();
 
             // Virtualize all items that come before the realization range
@@ -74,8 +83,11 @@ namespace TumblerApp.Views.Controls.Virtualization
 
             // Virtualize all items that come after the realization range
             ItemsControl owner = ItemsControl.GetItemsOwner(this);
-            int numItemsToVirtualizeAtEnd = owner.Items.Count - RealizationRange.End;
+            int numItemsToVirtualizeAtEnd = owner.Items.Count - RealizationRange.End - 1;
             VirtualizeRange(RealizationRange.End + 1, numItemsToVirtualizeAtEnd);
+
+            _isInitialVirtualizationComplete = true;
+            return finalSize;
         }
 
 
@@ -129,10 +141,14 @@ namespace TumblerApp.Views.Controls.Virtualization
 
         private void VirtualizeRange(int startIndex, int count)
         {
+            if (count == 0) return;
             Log.d($"About to virtualize {count} items starting at index {startIndex}");
 
             GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(startIndex);
-            for (int i = pos.Index; i < count; ++i)
+
+            int startChildIndex = pos.Index;
+            int endChildIndex = startChildIndex + count - 1;
+            for (int i = endChildIndex; i >= startChildIndex; --i)
             {
                 Children.RemoveAt(i);
             }
@@ -154,7 +170,8 @@ namespace TumblerApp.Views.Controls.Virtualization
                 ItemContainerGenerator.PrepareItemContainer(child);
 
                 ItemContainerGenerator.Stop();
-                Children.Add(child as UIElement);
+                int insertionIndex = pos.Index + pos.Offset;
+                Children.Insert(insertionIndex, child as UIElement);
             }
         }
 
@@ -163,8 +180,8 @@ namespace TumblerApp.Views.Controls.Virtualization
 
         private IndexRange CalculateCurrentRealizationRange()
         {
-            double realizationHeight = ActualHeight * 3;
-            double realizationRangeTopOffset = OffsetFromInitialPosition + realizationHeight / 2;
+            double realizationHeight = ChildHeight;
+            double realizationRangeTopOffset    = OffsetFromInitialPosition + realizationHeight / 2;
             double realizationRangeBottomOffset = OffsetFromInitialPosition - realizationHeight / 2;
 
             return CalculateIndexRangeFromOffsetRange(
@@ -176,14 +193,12 @@ namespace TumblerApp.Views.Controls.Virtualization
             double topOffset,
             double bottomOffset)
         {
-            var childTopBottoms =
+            var childTopBottoms = 
                 from child in Children
-                select (TranslateTransform)child.RenderTransform
-                into transform
-                select transform.Y
-                into childTop
-                let childBottom = childTop + ChildHeight
-                select new Tuple<double, double>(childTop, childBottom);
+                select GetChildBoundsInThisPanel(child) into bounds
+                select bounds.Top into childTop
+                let childbottom = childTop + ChildHeight
+                select new Tuple<double, double>(childTop, childbottom);
 
             int[] indicesInRange = CalculateIndicesInRange(childTopBottoms.ToList(), topOffset, bottomOffset);
             int firstIndexInRange = indicesInRange.Min();
