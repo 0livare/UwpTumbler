@@ -51,7 +51,32 @@ namespace TumblerApp.Views.Controls.Virtualization
         #endregion Virtualization Core
 
         private double _lastCalculatedRealizationRangeAtOffset;
+
         private IndexRange _realizationRange;
+        private IndexRange RealizationRange
+        {
+            get { return _realizationRange; }
+            set
+            {
+                _realizationRange = value;
+                _lastCalculatedRealizationRangeAtOffset = OffsetFromInitialPosition;
+            }
+        }
+
+        public VirtualizingLoopItemsPanel() { Loaded += OnLoaded; }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            RealizationRange = CalculateCurrentRealizationRange();
+
+            // Virtualize all items that come before the realization range
+            VirtualizeRange(0, RealizationRange.Start);
+
+            // Virtualize all items that come after the realization range
+            ItemsControl owner = ItemsControl.GetItemsOwner(this);
+            int numItemsToVirtualizeAtEnd = owner.Items.Count - RealizationRange.End;
+            VirtualizeRange(RealizationRange.End + 1, numItemsToVirtualizeAtEnd);
+        }
 
 
         protected override void OnScrolled(double movedBy)
@@ -66,33 +91,32 @@ namespace TumblerApp.Views.Controls.Virtualization
             IndexRange toBeRealized;
             IndexRange toBeVirtualized;
 
-            bool isScrollingDown = currentRealizationRange.Start < _realizationRange.Start;
+            bool isScrollingDown = currentRealizationRange.Start < RealizationRange.Start;
             if (isScrollingDown)
             {
                 // New items need to be added at the top
                 toBeRealized = new IndexRange(
                     currentRealizationRange.Start, 
-                    _realizationRange.Start - 1);
+                    RealizationRange.Start - 1);
                 toBeVirtualized = new IndexRange(
                     currentRealizationRange.End + 1,
-                    _realizationRange.End);
+                    RealizationRange.End);
             }
             else
             {
                 // New items need to be added at the bottom
                 toBeRealized = new IndexRange(
-                    _realizationRange.End + 1,
+                    RealizationRange.End + 1,
                     currentRealizationRange.End);
                 toBeVirtualized = new IndexRange(
-                    _realizationRange.Start,
+                    RealizationRange.Start,
                     currentRealizationRange.Start - 1);
             }
 
             RealizeRange(toBeRealized.Start, toBeRealized.Length);
             VirtualizeRange(toBeVirtualized.Start, toBeVirtualized.Length);
 
-            _realizationRange = currentRealizationRange;
-            _lastCalculatedRealizationRangeAtOffset = OffsetFromInitialPosition;
+            RealizationRange = currentRealizationRange;
         }
 
 
@@ -143,12 +167,12 @@ namespace TumblerApp.Views.Controls.Virtualization
             double realizationRangeTopOffset = OffsetFromInitialPosition + realizationHeight / 2;
             double realizationRangeBottomOffset = OffsetFromInitialPosition - realizationHeight / 2;
 
-            return CalculateIndiceRangeFromOffsetRange(
+            return CalculateIndexRangeFromOffsetRange(
                 realizationRangeTopOffset,
                 realizationRangeBottomOffset);
         }
 
-        private IndexRange CalculateIndiceRangeFromOffsetRange(
+        private IndexRange CalculateIndexRangeFromOffsetRange(
             double topOffset,
             double bottomOffset)
         {
