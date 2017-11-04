@@ -96,7 +96,7 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Controls\CircleItemsPanel.cs" />
-    <Compile Include="Views\Controls\Examples\VirtualizingPanel.cs" />
+    <Compile Include="Views\Controls\Virtualization\VirtualizingLoopItemsPanel.cs" />
     <Compile Include="Views\Controls\LoopItemsPanel.cs" />
     <Compile Include="Views\Controls\OrigLoopItemsPanel.cs" />
     <Compile Include="Views\Controls\Tumbler.xaml.cs">
