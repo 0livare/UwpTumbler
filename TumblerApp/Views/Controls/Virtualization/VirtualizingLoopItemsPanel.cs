@@ -16,6 +16,7 @@ namespace TumblerApp.Views.Controls.Virtualization
         #region Virtualization Core
 
         private ItemContainerGenerator _generator;
+        private double _initialTopOfFirstElement;
 
         public ItemContainerGenerator ItemContainerGenerator
         {
@@ -76,6 +77,9 @@ namespace TumblerApp.Views.Controls.Virtualization
 
             RealizationRange = CalculateCurrentRealizationRange();
 
+            int allItemsCount = GetParentItemsControl().Items.Count;
+            _initialTopOfFirstElement = -1 * allItemsCount * ChildHeight / 2;
+
             // Virtualize all items that come before the realization range
             VirtualizeRange(0, RealizationRange.Start);
 
@@ -86,8 +90,6 @@ namespace TumblerApp.Views.Controls.Virtualization
 
             _isInitialVirtualizationComplete = true;
 
-
-            CalculateCurrentRealizationRange();
             return finalSize;
         }
 
@@ -97,21 +99,19 @@ namespace TumblerApp.Views.Controls.Virtualization
             base.OnScrolled(movedBy);
 
             double movedBySinceLastCalculation = Math.Abs(OffsetFromInitialPosition - _lastCalculatedRealizationRangeAtOffset);
-//            Log.d($"--------- Moved by {movedBySinceLastCalculation}");
+            //Log.d($"--------- Moved by {movedBySinceLastCalculation} (waiting for {ChildHeight})");
 
-            if (movedBySinceLastCalculation < ChildHeight) return;
+            if (movedBySinceLastCalculation < ChildHeight / 2) return;
             Log.d($"----- Moved by more than half the actual height");
 
             IndexRange oldRealizationRange = RealizationRange;
             IndexRange currentRealizationRange = CalculateCurrentRealizationRange();
 
-            bool isScrollingDown = currentRealizationRange.Start < oldRealizationRange.Start;
-
             Log.d($"----- OldRange: {oldRealizationRange}, NewRange: {currentRealizationRange}");
-            Log.d($"----- isScrollingDown = {isScrollingDown}");
-
             if (oldRealizationRange.Equals(currentRealizationRange)) return;
 
+            bool isScrollingDown = currentRealizationRange.Start < oldRealizationRange.Start;
+            Log.d($"----- isScrollingDown = {isScrollingDown}");
 
             IndexRange toBeRealized;
             IndexRange toBeVirtualized;
@@ -192,11 +192,16 @@ namespace TumblerApp.Views.Controls.Virtualization
             GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(startIndex);
             ItemContainerGenerator.StartAt(pos, GeneratorDirection.Forward, true);
 
-            PrintValues();
-
             for (var i = 0; i < count; ++i)
             {
-                if (pos.Offset == 0) continue;
+                int itemsControlIndex = startIndex + i;
+                pos = ItemContainerGenerator.GeneratorPositionFromIndex(itemsControlIndex);
+
+                if (pos.Offset == 0)
+                {
+                    Log.e($"Position {(startIndex + i)} has an offset of ZERO!? -- skipping");
+                    continue;
+                }
 
                 DependencyObject child = ItemContainerGenerator.GenerateNext(out bool isNewlyRealized);
                 Log.d("isNewlyRealized = " + isNewlyRealized);
@@ -205,17 +210,20 @@ namespace TumblerApp.Views.Controls.Virtualization
                 Log.d($"Trying to insert:");
                 PrintValue(child);
 
+                IList<double> topAndBottoms = GetItemsTopAndBottomOffsets();
+                double topOffset = topAndBottoms[itemsControlIndex];
+
+                var uielem = (UIElement)child;
+                uielem.RenderTransform = new TranslateTransform { Y = 0 };
+
                 int insertionIndex = pos.Index + pos.Offset;
                 Children.Insert(insertionIndex, child as UIElement);
-                pos = ItemContainerGenerator.GeneratorPositionFromIndex(startIndex + i);
             }
 
             ItemContainerGenerator.Stop();
 
             Log.d($"Just realized {count} items starting at index {startIndex}");
             DumpGeneratorContent();
-
-            PrintValues();
         }
 
 
@@ -248,13 +256,13 @@ namespace TumblerApp.Views.Controls.Virtualization
 
         private IndexRange CalculateCurrentRealizationRange()
         {
-            double realizationHeight = ActualHeight;
+            double realizationHeight = ActualHeight * 1;
 
             double realizationRangeTopOffset    = -realizationHeight / 2;
             double realizationRangeBottomOffset =  realizationHeight / 2;
 
-            Log.d($"realizationHeight = {realizationHeight}");
-            Log.d($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
+            //Log.d($"realizationHeight = {realizationHeight}");
+            //Log.d($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
 
             return CalculateIndexRangeFromOffsetRange(
                 realizationRangeTopOffset,
@@ -267,10 +275,10 @@ namespace TumblerApp.Views.Controls.Virtualization
         {
 //            Log.d($"CalculateIndexRangeFromOffsetRange");
 
-            var childTopBottoms = GetItemsTopAndBottomOffsets();
+            var childtops = GetItemsTopAndBottomOffsets();
             //Log.d($"|\tchildTopBottoms = {childTopBottoms.ToList().ToDebugString()}");
 
-            int[] indicesInRange = CalculateIndicesInRange(childTopBottoms.ToList(), topOffset, bottomOffset);
+            int[] indicesInRange = CalculateIndicesInRange(childtops, topOffset, bottomOffset);
             int firstIndexInRange = indicesInRange.Min();
             int lastIndexInRange = indicesInRange.Max();
 
@@ -281,17 +289,17 @@ namespace TumblerApp.Views.Controls.Virtualization
         }
 
         private static int[] CalculateIndicesInRange(
-            IList<Tuple<double, double>> itemStartEnds,
+            IList<double> itemTops,
             double rangeTop,
             double rangeBottom)
         {
-            Log.d($"CalculateIndicesInRange(topBottoms (size {itemStartEnds.Count}), {rangeTop}, {rangeBottom}");
+            Log.d($"CalculateIndicesInRange(topBottoms (size {itemTops.Count}), {rangeTop}, {rangeBottom}");
             var indicesInRange = new List<int>();
 
-            for (var i = 0; i < itemStartEnds.Count; ++i)
+            for (var i = 0; i < itemTops.Count - 1; ++i)
             {
-                double top    = itemStartEnds[i].Item1;
-                double bottom = itemStartEnds[i].Item2;
+                double top    = itemTops[i];
+                double bottom = itemTops[i + 1];
 
                 bool isInRange = top < rangeTop    && bottom > rangeTop      // Straddles top border
                               || top > rangeTop    && bottom < rangeBottom   // Somewhere in the middle
@@ -308,46 +316,36 @@ namespace TumblerApp.Views.Controls.Virtualization
 
 
         // We don't really need the bottom offsets, because they're clearly repeated
-        private IList<Tuple<double, double>> GetItemsTopAndBottomOffsets()
+        private IList<double> GetItemsTopAndBottomOffsets()
         {
-            int firstRealizedChildIndex = GetFirstRealizedIndex();
-            UIElement firstRealizedChild = Children[0];
-            Rect firstRealizedChildBounds = GetChildBoundsInThisPanel(firstRealizedChild);
+//            int firstRealizedChildIndex = GetFirstRealizedIndex();
+//            UIElement firstRealizedChild = Children[0];
+//            Rect firstRealizedChildBounds = GetChildBoundsInThisPanel(firstRealizedChild);
+//
+//            double missingElementsHeight = firstRealizedChildIndex * ChildHeight;
+//            double firstRealizedChildTop = firstRealizedChildBounds.Y - missingElementsHeight + OffsetFromInitialPosition;
+//            double topOfFirstChild = firstRealizedChildTop - missingElementsHeight;
 
-            // The axis that exists in the panel seems to be inverted from ours, causing
-            // the movement to happen in the wrong direction.
-            double firstRealizedChildTop = firstRealizedChildBounds.Top + 2 * OffsetFromInitialPosition;
+//            Log.d($"GetItemsTopAndBottomOffsets");
+//            Log.d($"|\t OffsetFromInitialPosition = {OffsetFromInitialPosition}");
+//            Log.d($"|\t ChildHeight = {ChildHeight}");
+//            Log.d($"|\t firstRealizedChildIndex = {firstRealizedChildIndex}");
+//            Log.d($"|\t firstRealizedChildBounds Y = {firstRealizedChildBounds.Y}");
+//            Log.d($"|\t firstRealizedChildBounds top = {firstRealizedChildBounds.Top}");
+//            Log.d($"|\t firstRealizedChildTop calcualted = {firstRealizedChildTop}");
+//            Log.d($"|\t topOfFirstChild = {topOfFirstChild}");
 
-            Log.d($"GetItemsTopAndBottomOffsets");
-            Log.d($"|\tfirstRealizedChildIndex = {firstRealizedChildIndex}");
-            Log.d($"|\tfirstRealizedChildTop = {firstRealizedChildTop}");
-
-
-            double topOfFirstChild = firstRealizedChildTop - firstRealizedChildIndex * ChildHeight;
-            var childTopBottoms = new List<Tuple<double, double>>
-            {
-                Tuple.Create(topOfFirstChild, topOfFirstChild + ChildHeight)
-            };
+            var childTopBottoms = new List<double> { _initialTopOfFirstElement };
 
             // Virtualized items and realized items
             int allItemsCount = GetParentItemsControl().Items.Count;
-            for (var i = 1; i < allItemsCount; ++i)
+            for (var i = 1; i <= allItemsCount; ++i)
             {
-                double bottomOfLastChild = childTopBottoms[i - 1].Item2;
-                childTopBottoms.Add(Tuple.Create(bottomOfLastChild, bottomOfLastChild + ChildHeight));
+                double topOfLastChild = childTopBottoms[i - 1];
+                childTopBottoms.Add(topOfLastChild + ChildHeight);
             }
 
             return childTopBottoms;
-
-
-//            var childTopBottoms = 
-//                from child in Children
-//                select GetChildBoundsInThisPanel(child) into bounds
-//                select bounds.Top into childTop
-//                let childbottom = childTop + ChildHeight
-//                select new Tuple<double, double>(childTop, childbottom);
-//
-//            return childTopBottoms.ToList();
         }
 
 
@@ -403,7 +401,7 @@ namespace TumblerApp.Views.Controls.Virtualization
             public int Start  { get; set; }
             public int End { get; set; }
 
-            public int Length => End - Start;
+            public int Length => End - Start + 1;
 
             public IndexRange(int start, int end)
             {

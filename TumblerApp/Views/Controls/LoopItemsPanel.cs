@@ -193,6 +193,7 @@ namespace TumblerApp.Views.Controls
         #region Movement
         protected virtual void OnTapped(object sender, TappedRoutedEventArgs args)
         {
+            return;
             if (Children == null || Children.Count == 0) return;
 
             double tappedPointY = args.GetPosition(this).Y;
@@ -493,8 +494,8 @@ namespace TumblerApp.Views.Controls
                 UIElement child = Children[i];
                 Rect childBoundsInThisPanel = GetChildBoundsInThisPanel(child);
                 double childDistanceFromCenter = Math.Abs(AboveCenterChild - childBoundsInThisPanel.Y);
-                Log.d($"|\tChild at index {i} (val {GetValueFromChild(child)}) at position {(int)childBoundsInThisPanel.Y} is " +
-                      $"{(int)childDistanceFromCenter} units away from center");
+//                Log.d($"|\tChild at index {i} (val {GetValueFromChild(child)}) at position {(int)childBoundsInThisPanel.Y} is " +
+//                      $"{(int)childDistanceFromCenter} units away from center");
 
                 if (childDistanceFromCenter < closestTopToCenter)
                 {
@@ -504,8 +505,8 @@ namespace TumblerApp.Views.Controls
                 }
             }
 
-            Log.d($"|\tScrolling to closest index {closestIndex} with a value of " +
-                  $"{GetValueFromChild(Children[closestIndex])}");
+//            Log.d($"|\tScrolling to closest index {closestIndex} with a value of " +
+//                  $"{GetValueFromChild(Children[closestIndex])}");
 
             ScrollToIndex(closestIndex);
         }

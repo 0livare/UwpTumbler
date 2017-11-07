@@ -82,7 +82,7 @@
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate >
                         <virtual:VirtualizingLoopItemsPanel ShouldLoopChildren="False"
-                                                            SnapToItem="True"/>
+                                                            SnapToItem="False"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
             </ListBox>
