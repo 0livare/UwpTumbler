@@ -87,6 +87,22 @@
                 </ItemsControl.ItemsPanel>
             </ListBox>
 
+            <Line Stroke="Blue"
+                  StrokeThickness="0.1"
+                  X2="10000">
+                <Line.RenderTransform>
+                    <TranslateTransform Y="40" />
+                </Line.RenderTransform>
+            </Line>
+
+            <Line Stroke="Blue"
+                  StrokeThickness="0.1"
+                  X2="10000">
+                <Line.RenderTransform>
+                    <TranslateTransform Y="00" />
+                </Line.RenderTransform>
+            </Line>
+
             <!--
             <ListBox Grid.Column="1"
                      x:Name="MyListBox2"
