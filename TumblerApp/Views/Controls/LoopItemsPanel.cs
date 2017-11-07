@@ -65,7 +65,7 @@ namespace TumblerApp.Views.Controls
         }
 
         #region Properties
-        private bool IsMovingUp => OffsetFromInitialPosition > 0;
+        private bool IsMovingUp   => OffsetFromInitialPosition > 0;
         private bool IsMovingDown => OffsetFromInitialPosition < 0;
 
         /// <summary>
@@ -254,7 +254,10 @@ namespace TumblerApp.Views.Controls
         ///     The rectangular bounds of selectedItem, relative to this panel.
         /// </param>
         /// <param name="duration">The amount of time in milliseconds to take to animate to the passed item</param>
-        protected void ScrollToItem(UIElement selectedItem, Rect childBoundsInThisPanel, double duration = AnimationDurationInMillis)
+        protected void ScrollToItem(
+            UIElement selectedItem, 
+            Rect childBoundsInThisPanel, 
+            double duration = AnimationDurationInMillis)
         {
             if (!_templateApplied) return;
 
@@ -480,6 +483,8 @@ namespace TumblerApp.Views.Controls
         /// </summary>
         private void SanpToClosestItem()
         {
+            Log.d($"SanpToClosestItem - OffsetFromInitialPosition is {(int)OffsetFromInitialPosition}");
+
             int closestIndex = -1;
             var closestTopToCenter = double.MaxValue;
 
@@ -488,18 +493,28 @@ namespace TumblerApp.Views.Controls
                 UIElement child = Children[i];
                 Rect childBoundsInThisPanel = GetChildBoundsInThisPanel(child);
                 double childDistanceFromCenter = Math.Abs(AboveCenterChild - childBoundsInThisPanel.Y);
-                //Log.d($"Child at index {i} is {childDistanceFromCenter} units away from center");
+                Log.d($"|\tChild at index {i} (val {GetValueFromChild(child)}) at position {(int)childBoundsInThisPanel.Y} is " +
+                      $"{(int)childDistanceFromCenter} units away from center");
 
                 if (childDistanceFromCenter < closestTopToCenter)
                 {
                     closestTopToCenter = childDistanceFromCenter;
                     closestIndex = i;
-                    //Log.d($"Index {i} is the closest so far with a value of ???");
+                    //Log.d($"Index {i} is the closest so far");
                 }
             }
 
-            //Log.d($"Scrolling to closest index {closestIndex} with a value of ???");
-            SelectedIndex = closestIndex;
+            Log.d($"|\tScrolling to closest index {closestIndex} with a value of " +
+                  $"{GetValueFromChild(Children[closestIndex])}");
+
+            ScrollToIndex(closestIndex);
+        }
+
+        private string GetValueFromChild(object child)
+        {
+            var c = (ListBoxItem)child;
+            var dc = (ViewModels.Data)c.DataContext;
+            return dc.Title;
         }
 
         private void SnapBackFromDragPastEnd()

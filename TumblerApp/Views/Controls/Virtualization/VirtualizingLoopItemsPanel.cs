@@ -85,6 +85,9 @@ namespace TumblerApp.Views.Controls.Virtualization
             VirtualizeRange(RealizationRange.End + 1, numItemsToVirtualizeAtEnd);
 
             _isInitialVirtualizationComplete = true;
+
+
+            CalculateCurrentRealizationRange();
             return finalSize;
         }
 
@@ -226,14 +229,18 @@ namespace TumblerApp.Views.Controls.Virtualization
 
         private void PrintValue(object child, int i = int.MinValue)
         {
-            var c = (ListBoxItem)child;
-            var dc = (ViewModels.Data)c.DataContext;
-            var val = dc.Title;
-
+            string val = GetValueFromChild(child);
             Log.d(
                 i == int.MinValue
                     ? $"----- UI child has a value of {val}"
                     : $"----- UI child at UI index {i} has a value of {val}");
+        }
+
+        private string GetValueFromChild(object child)
+        {
+            var c = (ListBoxItem)child;
+            var dc = (ViewModels.Data)c.DataContext;
+            return dc.Title;
         }
 
 
@@ -243,10 +250,8 @@ namespace TumblerApp.Views.Controls.Virtualization
         {
             double realizationHeight = ActualHeight;
 
-            // When you move the panel up (into Q1), where the offsets are positive, the 
-            // offset from initial position is negative.  Thus the *-1
-            double realizationRangeTopOffset    = -1 * OffsetFromInitialPosition + realizationHeight / 2;
-            double realizationRangeBottomOffset = -1 * OffsetFromInitialPosition - realizationHeight / 2;
+            double realizationRangeTopOffset    = -realizationHeight / 2;
+            double realizationRangeBottomOffset =  realizationHeight / 2;
 
             Log.d($"realizationHeight = {realizationHeight}");
             Log.d($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
@@ -288,11 +293,10 @@ namespace TumblerApp.Views.Controls.Virtualization
                 double top    = itemStartEnds[i].Item1;
                 double bottom = itemStartEnds[i].Item2;
 
-                // Cartesian coordinate plane - up is positive, down is negative
-                bool isInRange = top > rangeTop    && bottom < rangeTop      // Straddles top border
-                              || top < rangeTop    && bottom > rangeBottom   // Somewhere in the middle
-                              || top > rangeBottom && bottom < rangeBottom   // Straddles the bottom border
-                              || top > rangeTop    && bottom < rangeBottom;  // Overlaps the entire range
+                bool isInRange = top < rangeTop    && bottom > rangeTop      // Straddles top border
+                              || top > rangeTop    && bottom < rangeBottom   // Somewhere in the middle
+                              || top < rangeBottom && bottom > rangeBottom   // Straddles the bottom border
+                              || top < rangeTop    && bottom > rangeBottom;  // Overlaps the entire range
 
                 Log.d($"| \tItem from [{(int)top}:{(int)bottom}]\t at index {i} is {(isInRange ? "" : "NOT")} in range");
 
@@ -309,7 +313,15 @@ namespace TumblerApp.Views.Controls.Virtualization
             int firstRealizedChildIndex = GetFirstRealizedIndex();
             UIElement firstRealizedChild = Children[0];
             Rect firstRealizedChildBounds = GetChildBoundsInThisPanel(firstRealizedChild);
-            double firstRealizedChildTop = firstRealizedChildBounds.Top;
+
+            // The axis that exists in the panel seems to be inverted from ours, causing
+            // the movement to happen in the wrong direction.
+            double firstRealizedChildTop = firstRealizedChildBounds.Top + 2 * OffsetFromInitialPosition;
+
+            Log.d($"GetItemsTopAndBottomOffsets");
+            Log.d($"|\tfirstRealizedChildIndex = {firstRealizedChildIndex}");
+            Log.d($"|\tfirstRealizedChildTop = {firstRealizedChildTop}");
+
 
             double topOfFirstChild = firstRealizedChildTop - firstRealizedChildIndex * ChildHeight;
             var childTopBottoms = new List<Tuple<double, double>>
