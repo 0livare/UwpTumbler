@@ -75,10 +75,8 @@ namespace TumblerApp.Views.Controls.Virtualization
             finalSize = base.ArrangeOverride(finalSize);
             if (_isInitialVirtualizationComplete || !Children.Any()) return finalSize;
 
+            _initialTopOfFirstElement = GetInitialTopOffsetOfFirstElem();
             RealizationRange = CalculateCurrentRealizationRange();
-
-            int allItemsCount = GetParentItemsControl().Items.Count;
-            _initialTopOfFirstElement = -1 * allItemsCount * ChildHeight / 2;
 
             // Virtualize all items that come before the realization range
             VirtualizeRange(0, RealizationRange.Start);
@@ -91,6 +89,17 @@ namespace TumblerApp.Views.Controls.Virtualization
             _isInitialVirtualizationComplete = true;
 
             return finalSize;
+        }
+
+        private double GetInitialTopOffsetOfFirstElem()
+        {
+            int firstRealizedChildIndex = GetFirstRealizedIndex();
+            UIElement firstRealizedChild = Children[0];
+            Rect firstRealizedChildBounds = GetChildBoundsInThisPanel(firstRealizedChild);
+
+            double missingElementsHeight = firstRealizedChildIndex * ChildHeight;
+            double firstRealizedChildTop = firstRealizedChildBounds.Y - missingElementsHeight + OffsetFromInitialPosition;
+            return firstRealizedChildTop - missingElementsHeight;
         }
 
 
@@ -335,7 +344,7 @@ namespace TumblerApp.Views.Controls.Virtualization
 //            Log.d($"|\t firstRealizedChildTop calcualted = {firstRealizedChildTop}");
 //            Log.d($"|\t topOfFirstChild = {topOfFirstChild}");
 
-            var childTopBottoms = new List<double> { _initialTopOfFirstElement };
+            var childTopBottoms = new List<double> { _initialTopOfFirstElement + OffsetFromInitialPosition };
 
             // Virtualized items and realized items
             int allItemsCount = GetParentItemsControl().Items.Count;
