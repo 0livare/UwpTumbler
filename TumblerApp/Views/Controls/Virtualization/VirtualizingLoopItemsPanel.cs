@@ -78,9 +78,9 @@ namespace TumblerApp.Views.Controls.Virtualization
                 var index = GetFirstRealizedIndex();
                 var tops = GetItemsTopOffsets();
 
-                positionTop = tops[index];
+//                positionTop = tops[index];
 
-                Log.d($"-------- Setting index {index} to have a top offset of {positionTop}");
+                Log.d($"-------- INSERTING: Setting index {index} to have a top offset of {positionTop}");
             };
 
             _finalSizeOfThisPanel = finalSize;
@@ -108,13 +108,16 @@ namespace TumblerApp.Views.Controls.Virtualization
 
                 child.Arrange(childsDesiredBounds);
 
-                Log.i($"Child {GetValueFromChild(child)} has a desired top of {positionTop}");
-
                 // Explicitly set internal RenderTransform to TranslateTransform 
                 // to handle vertical movement
                 if (!_isInsertingOrRemovingChildren)
                 {
                     child.RenderTransform = new TranslateTransform();
+                }
+                else
+                {
+                    var translate = (TranslateTransform)child.RenderTransform;
+                    translate.Y = 0;
                 }
 
                 positionTop += childDesiredSize.Height;
@@ -136,7 +139,7 @@ namespace TumblerApp.Views.Controls.Virtualization
 
             _isInitialVirtualizationComplete = true;
 
-            PrintValues();
+            //PrintValues();
             return finalSize;
         }
 
@@ -156,14 +159,16 @@ namespace TumblerApp.Views.Controls.Virtualization
         {
             base.OnScrolled(movedBy);
 
-            //Log.d($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
+            Log.i($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
+            CalculateIndicesInRange(GetItemsTopOffsets(), 0, 700);
+
 
             double movedBySinceLastCalculation = Math.Abs(OffsetFromInitialPosition - _lastCalculatedRealizationRangeAtOffset);
             double increment = ChildHeight / 2;
             //Log.d($"\t Moved by {movedBySinceLastCalculation} (waiting for {increment})");
 
             if (movedBySinceLastCalculation < increment) return;
-            Log.d($"----- Moved by more than half the actual height ({movedBySinceLastCalculation})");
+            Log.d($"----- Moved by more than half the actual height ({(int)movedBySinceLastCalculation}) to {(int)OffsetFromInitialPosition}");
 
             IndexRange oldRealizationRange = RealizationRange;
             IndexRange currentRealizationRange = CalculateCurrentRealizationRange();
@@ -171,7 +176,10 @@ namespace TumblerApp.Views.Controls.Virtualization
             Log.d($"----- OldRange: {oldRealizationRange}, NewRange: {currentRealizationRange}");
             if (oldRealizationRange.Equals(currentRealizationRange)) return;
 
-            bool isMovingTowardTop = currentRealizationRange.Start < oldRealizationRange.Start;
+            bool isMovingTowardTop =
+                currentRealizationRange.Start < oldRealizationRange.Start ||
+                currentRealizationRange.End   < oldRealizationRange.End;
+
             Log.d($"----- isMovingTowardTop = {isMovingTowardTop}");
 
             IndexRange toBeRealized;
@@ -318,6 +326,7 @@ namespace TumblerApp.Views.Controls.Virtualization
 //            Log.d($"CalculateIndexRangeFromOffsetRange");
 
             var childtops = GetItemsTopOffsets();
+
             //Log.d($"|\tchildTopBottoms = {childTopBottoms.ToList().ToDebugString()}");
 
             int[] indicesInRange = CalculateIndicesInRange(childtops, topOffset, bottomOffset);
