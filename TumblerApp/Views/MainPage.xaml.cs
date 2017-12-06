@@ -24,8 +24,7 @@ namespace TumblerApp.Views
 
         private void CreateRulerLines(double totalHeight)
         {
-            double halfTotalHeight = totalHeight / 2;
-            for (double offset = -halfTotalHeight; offset <= halfTotalHeight; offset += 50)
+            for (double offset = 0; offset <= totalHeight; offset += 50)
             {
                 AddRulerLineAtOffset(offset, totalHeight);
             }
@@ -44,7 +43,7 @@ namespace TumblerApp.Views
 
         private UIElement CreateRulerLineAtOffset(double naturalOffset, double totalHeight)
         {
-            double offsetFromBottom = naturalOffset - totalHeight / 2;
+            double offsetFromBottom = naturalOffset - totalHeight;
             string label = naturalOffset.ToString();
 
             return CreateRulerLine(offsetFromBottom, totalHeight, label);
