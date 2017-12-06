@@ -70,6 +70,19 @@ namespace TumblerApp.Views.Controls.Virtualization
 
         protected override Size ArrangeOverride(Size finalSize)
         {
+            _initialTopOfFirstElement = 0;
+            double positionTop = _initialTopOfFirstElement;
+
+            if (_isInsertingOrRemovingChildren)
+            {
+                var index = GetFirstRealizedIndex();
+                var tops = GetItemsTopOffsets();
+
+                positionTop = tops[index];
+
+                Log.d($"-------- Setting index {index} to have a top offset of {positionTop}");
+            };
+
             _finalSizeOfThisPanel = finalSize;
             Log.e($"ArrangeOverride: final size is {finalSize}, {_isInsertingOrRemovingChildren}");
 
@@ -77,8 +90,6 @@ namespace TumblerApp.Views.Controls.Virtualization
             /////// Stolen from parent class
             Clip = new RectangleGeometry { Rect = new Rect(0, 0, finalSize.Width, finalSize.Height) };
 
-            _initialTopOfFirstElement = 0;
-            double positionTop = _initialTopOfFirstElement;
 
             // Must Create looping items count
             foreach (UIElement child in Children)
@@ -104,8 +115,9 @@ namespace TumblerApp.Views.Controls.Virtualization
                 if (!_isInsertingOrRemovingChildren)
                 {
                     child.RenderTransform = new TranslateTransform();
-                    positionTop += childDesiredSize.Height;
                 }
+
+                positionTop += childDesiredSize.Height;
             }
             //////
 
@@ -144,13 +156,14 @@ namespace TumblerApp.Views.Controls.Virtualization
         {
             base.OnScrolled(movedBy);
 
-            Log.d($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
+            //Log.d($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
 
             double movedBySinceLastCalculation = Math.Abs(OffsetFromInitialPosition - _lastCalculatedRealizationRangeAtOffset);
-            Log.d($"--------- Moved by {movedBySinceLastCalculation} (waiting for {ChildHeight})");
+            double increment = ChildHeight / 2;
+            //Log.d($"\t Moved by {movedBySinceLastCalculation} (waiting for {increment})");
 
-            if (movedBySinceLastCalculation < ChildHeight / 2) return;
-            Log.d($"----- Moved by more than half the actual height");
+            if (movedBySinceLastCalculation < increment) return;
+            Log.d($"----- Moved by more than half the actual height ({movedBySinceLastCalculation})");
 
             IndexRange oldRealizationRange = RealizationRange;
             IndexRange currentRealizationRange = CalculateCurrentRealizationRange();
@@ -331,10 +344,10 @@ namespace TumblerApp.Views.Controls.Virtualization
                 double bottom = itemTops[i + 1];
 
                 // This assumes the coordinate plane increases downward
-                bool isInRange = top < rangeTop    && bottom > rangeTop      // Straddles top border
-                              || top > rangeTop    && bottom < rangeBottom   // Somewhere in the middle
-                              || top < rangeBottom && bottom > rangeBottom   // Straddles the bottom border
-                              || top < rangeTop    && bottom > rangeBottom;  // Overlaps the entire range
+                bool isInRange = top <= rangeTop    && bottom >= rangeTop      // Straddles top border
+                              || top >= rangeTop    && bottom <= rangeBottom   // Somewhere in the middle
+                              || top <= rangeBottom && bottom >= rangeBottom   // Straddles the bottom border
+                              || top <= rangeTop    && bottom >= rangeBottom;  // Overlaps the entire range
 
                 Log.d($"| \tItem from [{(int)top}:{(int)bottom}]\t at index {i} is {(isInRange ? "" : "NOT")} in range");
 
