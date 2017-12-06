@@ -24,16 +24,33 @@ namespace TumblerApp.Views
 
         private void CreateRulerLines(double totalHeight)
         {
-            for (var i = 0; i >= -totalHeight; i -= 100)
+            double halfTotalHeight = totalHeight / 2;
+            for (double offset = -halfTotalHeight; offset <= halfTotalHeight; offset += 50)
             {
-                Relative.Children.Add(CreateRulerLine(i, totalHeight));
+                AddRulerLineAtOffset(offset, totalHeight);
             }
 
-            // Always add line for zero 
-            Relative.Children.Add(CreateRulerLine((int)totalHeight / 2 * -1, totalHeight));
+            // Always add line for zero
+            AddRulerLineAtOffset(0, totalHeight);
+
+            AddRulerLineAtOffset(-189, totalHeight);
+            AddRulerLineAtOffset(-343, totalHeight);
         }
 
-        private UIElement CreateRulerLine(int offset, double totalHeight)
+        private void AddRulerLineAtOffset(double naturalOffset, double totalHeight)
+        {
+            Relative.Children.Add(CreateRulerLineAtOffset(naturalOffset, totalHeight));
+        }
+
+        private UIElement CreateRulerLineAtOffset(double naturalOffset, double totalHeight)
+        {
+            double offsetFromBottom = naturalOffset - totalHeight / 2;
+            string label = naturalOffset.ToString();
+
+            return CreateRulerLine(offsetFromBottom, totalHeight, label);
+        }
+
+        private UIElement CreateRulerLine(double offset, double totalHeight, string label)
         {
             var line = new Line
             {
@@ -45,7 +62,7 @@ namespace TumblerApp.Views
 
             var text = new TextBlock
             {
-                Text = "" + (offset + totalHeight / 2),
+                Text = label,
                 Margin = new Thickness(0, 0, 10, 0),
                 VerticalAlignment = VerticalAlignment.Bottom,
             };
