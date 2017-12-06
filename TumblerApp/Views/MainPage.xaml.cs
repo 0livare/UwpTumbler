@@ -31,9 +31,6 @@ namespace TumblerApp.Views
 
             // Always add line for zero
             AddRulerLineAtOffset(0, totalHeight);
-
-            AddRulerLineAtOffset(-189, totalHeight);
-            AddRulerLineAtOffset(-343, totalHeight);
         }
 
         private void AddRulerLineAtOffset(double naturalOffset, double totalHeight)

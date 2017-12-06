@@ -8,16 +8,17 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Media;
 using TumblerApp.Util;
+using TumblerApp.ViewModels;
 
 namespace TumblerApp.Views.Controls.Virtualization
 {
     public class VirtualizingLoopItemsPanel : LoopItemsPanel
     {
-        #region Virtualization Core
-
         private ItemContainerGenerator _generator;
         private double _initialTopOfFirstElement;
+        private Size _finalSizeOfThisPanel;
 
+        #region Virtualization Core
         public ItemContainerGenerator ItemContainerGenerator
         {
             get
@@ -49,7 +50,6 @@ namespace TumblerApp.Views.Controls.Virtualization
                 OnClearChildren();
             }
         }
-
         #endregion Virtualization Core
 
         private double _lastCalculatedRealizationRangeAtOffset;
@@ -68,18 +68,17 @@ namespace TumblerApp.Views.Controls.Virtualization
             }
         }
 
-        public VirtualizingLoopItemsPanel()
-        {
-        }
-
         protected override Size ArrangeOverride(Size finalSize)
         {
+            _finalSizeOfThisPanel = finalSize;
             Log.e($"ArrangeOverride: final size is {finalSize}, {_isInsertingOrRemovingChildren}");
 
 
             /////// Stolen from parent class
             Clip = new RectangleGeometry { Rect = new Rect(0, 0, finalSize.Width, finalSize.Height) };
-            double positionTop = GetFirstChildTopOffset(finalSize);
+
+            _initialTopOfFirstElement = 0;
+            double positionTop = _initialTopOfFirstElement;
 
             // Must Create looping items count
             foreach (UIElement child in Children)
@@ -98,6 +97,8 @@ namespace TumblerApp.Views.Controls.Virtualization
 
                 child.Arrange(childsDesiredBounds);
 
+                Log.i($"Child {GetValueFromChild(child)} has a desired top of {positionTop}");
+
                 // Explicitly set internal RenderTransform to TranslateTransform 
                 // to handle vertical movement
                 if (!_isInsertingOrRemovingChildren)
@@ -108,9 +109,9 @@ namespace TumblerApp.Views.Controls.Virtualization
             }
             //////
 
+
             if (_isInitialVirtualizationComplete || !Children.Any()) return finalSize;
 
-            _initialTopOfFirstElement = GetInitialTopOffsetOfFirstElem();
             RealizationRange = CalculateCurrentRealizationRange();
 
             // Virtualize all items that come before the realization range
@@ -127,24 +128,26 @@ namespace TumblerApp.Views.Controls.Virtualization
             return finalSize;
         }
 
-        private double GetInitialTopOffsetOfFirstElem()
-        {
-            int firstRealizedChildIndex = GetFirstRealizedIndex();
-            UIElement firstRealizedChild = Children[0];
-            Rect firstRealizedChildBounds = GetChildBoundsInThisPanel(firstRealizedChild);
-
-            double missingElementsHeight = firstRealizedChildIndex * ChildHeight;
-            double firstRealizedChildTop = firstRealizedChildBounds.Y - missingElementsHeight + OffsetFromInitialPosition;
-            return firstRealizedChildTop - missingElementsHeight;
-        }
+//        private double GetInitialTopOffsetOfFirstElem()
+//        {
+//            int firstRealizedChildIndex = GetFirstRealizedIndex();
+//            UIElement firstRealizedChild = Children[0];
+//            Rect firstRealizedChildBounds = GetChildBoundsInThisPanel(firstRealizedChild);
+//
+//            double missingElementsHeight = firstRealizedChildIndex * ChildHeight;
+//            double firstRealizedChildTop = firstRealizedChildBounds.Y - missingElementsHeight + OffsetFromInitialPosition;
+//            return firstRealizedChildTop - missingElementsHeight;
+//        }
 
 
         protected override void OnScrolled(double movedBy)
         {
             base.OnScrolled(movedBy);
 
+            Log.d($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
+
             double movedBySinceLastCalculation = Math.Abs(OffsetFromInitialPosition - _lastCalculatedRealizationRangeAtOffset);
-            //Log.d($"--------- Moved by {movedBySinceLastCalculation} (waiting for {ChildHeight})");
+            Log.d($"--------- Moved by {movedBySinceLastCalculation} (waiting for {ChildHeight})");
 
             if (movedBySinceLastCalculation < ChildHeight / 2) return;
             Log.d($"----- Moved by more than half the actual height");
@@ -155,13 +158,13 @@ namespace TumblerApp.Views.Controls.Virtualization
             Log.d($"----- OldRange: {oldRealizationRange}, NewRange: {currentRealizationRange}");
             if (oldRealizationRange.Equals(currentRealizationRange)) return;
 
-            bool isScrollingDown = currentRealizationRange.Start < oldRealizationRange.Start;
-            Log.d($"----- isScrollingDown = {isScrollingDown}");
+            bool isMovingTowardTop = currentRealizationRange.Start < oldRealizationRange.Start;
+            Log.d($"----- isMovingTowardTop = {isMovingTowardTop}");
 
             IndexRange toBeRealized;
             IndexRange toBeVirtualized;
 
-            if (isScrollingDown)
+            if (isMovingTowardTop)
             {
                 // New items need to be added at the top
                 toBeRealized = new IndexRange(
@@ -278,39 +281,14 @@ namespace TumblerApp.Views.Controls.Virtualization
             UpdatePositionsForIndices(0, lastIndex, offset);
         }
 
-        private void PrintValues()
-        {
-            for (var i=0; i<Children.Count; ++i)
-            {
-                PrintValue(Children[i], i);
-            }
-        }
-
-        private void PrintValue(object child, int i = int.MinValue)
-        {
-            string val = GetValueFromChild(child);
-            Log.d(
-                i == int.MinValue
-                    ? $"----- UI child has a value of {val}"
-                    : $"----- UI child at UI index {i} has a value of {val}");
-        }
-
-        private string GetValueFromChild(object child)
-        {
-            var c = (ListBoxItem)child;
-            var dc = (ViewModels.Data)c.DataContext;
-            return dc.Title;
-        }
-
-
-
-
+        #region Range Calculation
         private IndexRange CalculateCurrentRealizationRange()
         {
             double realizationHeight = ActualHeight * 1;
+            double heightOfThisPanel = _finalSizeOfThisPanel.Height;
 
-            double realizationRangeTopOffset    = -realizationHeight / 2;
-            double realizationRangeBottomOffset =  realizationHeight / 2;
+            double realizationRangeTopOffset    = heightOfThisPanel / 2 - realizationHeight / 2;
+            double realizationRangeBottomOffset = heightOfThisPanel / 2 + realizationHeight / 2;
 
             //Log.d($"realizationHeight = {realizationHeight}");
             //Log.d($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
@@ -339,7 +317,7 @@ namespace TumblerApp.Views.Controls.Virtualization
             return r;
         }
 
-        private static int[] CalculateIndicesInRange(
+        private int[] CalculateIndicesInRange(
             IList<double> itemTops,
             double rangeTop,
             double rangeBottom)
@@ -352,6 +330,7 @@ namespace TumblerApp.Views.Controls.Virtualization
                 double top    = itemTops[i];
                 double bottom = itemTops[i + 1];
 
+                // This assumes the coordinate plane increases downward
                 bool isInRange = top < rangeTop    && bottom > rangeTop      // Straddles top border
                               || top > rangeTop    && bottom < rangeBottom   // Somewhere in the middle
                               || top < rangeBottom && bottom > rangeBottom   // Straddles the bottom border
@@ -364,18 +343,21 @@ namespace TumblerApp.Views.Controls.Virtualization
 
             return indicesInRange.ToArray();
         }
+        #endregion Range Calculation
 
 
+        #region HelperMethods
         private IList<double> GetItemsTopOffsets()
         {
             var childTops = new List<double> { _initialTopOfFirstElement + OffsetFromInitialPosition };
 
-            // Virtualized items and realized items
+            // Both virtualized items and realized items
             int allItemsCount = GetParentItemsControl().Items.Count;
+
             for (var i = 1; i <= allItemsCount; ++i)
             {
-                double topOfLastChild = childTops[i - 1];
-                childTops.Add(topOfLastChild + ChildHeight);
+                double topOfPreviousChild = childTops[i - 1];
+                childTops.Add(topOfPreviousChild + ChildHeight);
             }
 
             return childTops;
@@ -386,9 +368,6 @@ namespace TumblerApp.Views.Controls.Virtualization
             double firstItemTopOffset = _initialTopOfFirstElement + OffsetFromInitialPosition;
             return firstItemTopOffset + ChildHeight * index;
         }
-
-
-
 
 
         private int GetFirstRealizedIndex()
@@ -407,8 +386,10 @@ namespace TumblerApp.Views.Controls.Virtualization
         {
             return ItemsControl.GetItemsOwner(this);
         }
+        #endregion HelperMethods
 
 
+        #region Debug Methods
         private void DumpGeneratorContent()
         {
             ItemsControl itemsControl = GetParentItemsControl();
@@ -429,8 +410,30 @@ namespace TumblerApp.Views.Controls.Virtualization
             Log.d("\n");
         }
 
+        private void PrintValues()
+        {
+            for (var i = 0; i < Children.Count; ++i)
+            {
+                PrintValue(Children[i], i);
+            }
+        }
 
+        private void PrintValue(object child, int i = int.MinValue)
+        {
+            string val = GetValueFromChild(child);
+            Log.d(
+                i == int.MinValue
+                    ? $"----- UI child has a value of {val}"
+                    : $"----- UI child at UI index {i} has a value of {val}");
+        }
 
+        private string GetValueFromChild(object child)
+        {
+            var c = (ListBoxItem)child;
+            var dc = (ViewModels.Data)c.DataContext;
+            return dc.Title;
+        }
+        #endregion Debug Methods
 
 
 

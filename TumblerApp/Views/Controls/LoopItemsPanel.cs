@@ -220,7 +220,7 @@ namespace TumblerApp.Views.Controls
         /// <summary>
         ///     Get the childs bounding rectangle relaive to this panel
         /// </summary>
-        protected Rect GetChildBoundsInThisPanel(UIElement child)
+        private Rect GetChildBoundsInThisPanel(UIElement child)
         {
             GeneralTransform toThisPanelCoordPlaneMap = child.TransformToVisual(this);
             var childDesiredBounds = new Rect(0, 0, child.DesiredSize.Width, child.DesiredSize.Height);

@@ -25,9 +25,12 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <Rectangle HorizontalAlignment="Stretch" Width="120" Height="120"
-                       Fill="ForestGreen" VerticalAlignment="Stretch" 
-                       Stretch="Uniform" />
+                <Rectangle 
+                    HorizontalAlignment="Stretch" 
+                    VerticalAlignment="Stretch" 
+                    Width="120" Height="120"
+                    Fill="ForestGreen" 
+                    Stretch="Uniform" />
                 <TextBlock Text="{Binding Title}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="30"></TextBlock>
             </Grid>
         </DataTemplate>
