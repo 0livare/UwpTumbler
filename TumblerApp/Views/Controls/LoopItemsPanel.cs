@@ -116,7 +116,7 @@ namespace TumblerApp.Views.Controls
         /// </summary>
         protected override Size ArrangeOverride(Size finalSize)
         {
-            //Log.d($"ArrangeOverride: final size is {finalSize}");
+            //Log.e($"ArrangeOverride: final size is {finalSize}");
 
             // Clip to ensure items dont override container
             Clip = new RectangleGeometry { Rect = new Rect(0, 0, finalSize.Width, finalSize.Height) };
@@ -129,7 +129,7 @@ namespace TumblerApp.Views.Controls
 
                 Size childDesiredSize = child.DesiredSize;
                 if (double.IsNaN(childDesiredSize.Width)
-                    || double.IsNaN(childDesiredSize.Height)) continue;
+                 || double.IsNaN(childDesiredSize.Height)) continue;
 
                 var childsDesiredBounds = new Rect(
                     GetChildLeftOffset(finalSize, childDesiredSize),
@@ -154,7 +154,7 @@ namespace TumblerApp.Views.Controls
         ///     will be properly vertically aligned in this panel (Top, Center, Bottom).
         /// </summary>
         /// <param name="parentSize">The current size of this panel</param>
-        private double GetFirstChildTopOffset(Size parentSize)
+        protected double GetFirstChildTopOffset(Size parentSize)
         {
             if (VerticalContentAlignment != VerticalAlignment.Center &&
                 VerticalContentAlignment != VerticalAlignment.Bottom) return 0;
@@ -163,7 +163,7 @@ namespace TumblerApp.Views.Controls
 
             return VerticalContentAlignment == VerticalAlignment.Center
                 ? parentSize.Height / 2 - totalChildHeight / 2
-                : parentSize.Height - totalChildHeight;
+                : parentSize.Height     - totalChildHeight;
         }
 
         /// <summary>
@@ -173,7 +173,7 @@ namespace TumblerApp.Views.Controls
         /// <param name="parentSize">The current size of this panel</param>
         /// <param name="childSize">The current size of the child to be aligned</param>
         /// <returns>The proper left offset to correctly align the child in question</returns>
-        private double GetChildLeftOffset(Size parentSize, Size childSize)
+        protected double GetChildLeftOffset(Size parentSize, Size childSize)
         {
             switch (HorizontalContentAlignment)
             {
@@ -451,7 +451,7 @@ namespace TumblerApp.Views.Controls
         /// <summary>
         ///     Translate items to a new offset
         /// </summary>
-        private void UpdatePositionsForIndices(int startIndex, int endIndex, double offset)
+        protected void UpdatePositionsForIndices(int startIndex, int endIndex, double offset)
         {
             for (int i = startIndex; i < endIndex; ++i)
             {

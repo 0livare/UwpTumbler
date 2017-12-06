@@ -56,6 +56,8 @@ namespace TumblerApp.Views.Controls.Virtualization
         private bool _isInitialVirtualizationComplete;
 
         private IndexRange _realizationRange;
+        private bool _isInsertingOrRemovingChildren;
+
         private IndexRange RealizationRange
         {
             get { return _realizationRange; }
@@ -72,7 +74,40 @@ namespace TumblerApp.Views.Controls.Virtualization
 
         protected override Size ArrangeOverride(Size finalSize)
         {
-            finalSize = base.ArrangeOverride(finalSize);
+            Log.e($"ArrangeOverride: final size is {finalSize}, {_isInsertingOrRemovingChildren}");
+
+
+            /////// Stolen from parent class
+            Clip = new RectangleGeometry { Rect = new Rect(0, 0, finalSize.Width, finalSize.Height) };
+            double positionTop = GetFirstChildTopOffset(finalSize);
+
+            // Must Create looping items count
+            foreach (UIElement child in Children)
+            {
+                if (child == null) continue;
+
+                Size childDesiredSize = child.DesiredSize;
+                if (double.IsNaN(childDesiredSize.Width)
+                 || double.IsNaN(childDesiredSize.Height)) continue;
+
+                var childsDesiredBounds = new Rect(
+                    GetChildLeftOffset(finalSize, childDesiredSize),
+                    positionTop,
+                    childDesiredSize.Width,
+                    childDesiredSize.Height);
+
+                child.Arrange(childsDesiredBounds);
+
+                // Explicitly set internal RenderTransform to TranslateTransform 
+                // to handle vertical movement
+                if (!_isInsertingOrRemovingChildren)
+                {
+                    child.RenderTransform = new TranslateTransform();
+                    positionTop += childDesiredSize.Height;
+                }
+            }
+            //////
+
             if (_isInitialVirtualizationComplete || !Children.Any()) return finalSize;
 
             _initialTopOfFirstElement = GetInitialTopOffsetOfFirstElem();
@@ -88,6 +123,7 @@ namespace TumblerApp.Views.Controls.Virtualization
 
             _isInitialVirtualizationComplete = true;
 
+            PrintValues();
             return finalSize;
         }
 
@@ -154,8 +190,9 @@ namespace TumblerApp.Views.Controls.Virtualization
                 if (range.End > maxIndex) range.End = maxIndex;
             }
 
+            _isInsertingOrRemovingChildren = true;
             RealizeRange(toBeRealized.Start, toBeRealized.Length);
-            VirtualizeRange(toBeVirtualized.Start, toBeVirtualized.Length);
+            //VirtualizeRange(toBeVirtualized.Start, toBeVirtualized.Length);
 
             RealizationRange = currentRealizationRange;
         }
@@ -219,9 +256,6 @@ namespace TumblerApp.Views.Controls.Virtualization
                 Log.d($"Trying to insert:");
                 PrintValue(child);
 
-                IList<double> topAndBottoms = GetItemsTopAndBottomOffsets();
-                double topOffset = topAndBottoms[itemsControlIndex];
-
                 var uielem = (UIElement)child;
                 uielem.RenderTransform = new TranslateTransform { Y = 0 };
 
@@ -231,10 +265,18 @@ namespace TumblerApp.Views.Controls.Virtualization
 
             ItemContainerGenerator.Stop();
 
+            // Adding an item has moved all other items, account for that here
+            MoveAllRealizedItemsBy(ChildHeight * count);
+
             Log.d($"Just realized {count} items starting at index {startIndex}");
             DumpGeneratorContent();
         }
 
+        private void MoveAllRealizedItemsBy(double offset)
+        {
+            int lastIndex = Children.Count - 1;
+            UpdatePositionsForIndices(0, lastIndex, offset);
+        }
 
         private void PrintValues()
         {
@@ -284,7 +326,7 @@ namespace TumblerApp.Views.Controls.Virtualization
         {
 //            Log.d($"CalculateIndexRangeFromOffsetRange");
 
-            var childtops = GetItemsTopAndBottomOffsets();
+            var childtops = GetItemsTopOffsets();
             //Log.d($"|\tchildTopBottoms = {childTopBottoms.ToList().ToDebugString()}");
 
             int[] indicesInRange = CalculateIndicesInRange(childtops, topOffset, bottomOffset);
@@ -324,37 +366,25 @@ namespace TumblerApp.Views.Controls.Virtualization
         }
 
 
-        // We don't really need the bottom offsets, because they're clearly repeated
-        private IList<double> GetItemsTopAndBottomOffsets()
+        private IList<double> GetItemsTopOffsets()
         {
-//            int firstRealizedChildIndex = GetFirstRealizedIndex();
-//            UIElement firstRealizedChild = Children[0];
-//            Rect firstRealizedChildBounds = GetChildBoundsInThisPanel(firstRealizedChild);
-//
-//            double missingElementsHeight = firstRealizedChildIndex * ChildHeight;
-//            double firstRealizedChildTop = firstRealizedChildBounds.Y - missingElementsHeight + OffsetFromInitialPosition;
-//            double topOfFirstChild = firstRealizedChildTop - missingElementsHeight;
-
-//            Log.d($"GetItemsTopAndBottomOffsets");
-//            Log.d($"|\t OffsetFromInitialPosition = {OffsetFromInitialPosition}");
-//            Log.d($"|\t ChildHeight = {ChildHeight}");
-//            Log.d($"|\t firstRealizedChildIndex = {firstRealizedChildIndex}");
-//            Log.d($"|\t firstRealizedChildBounds Y = {firstRealizedChildBounds.Y}");
-//            Log.d($"|\t firstRealizedChildBounds top = {firstRealizedChildBounds.Top}");
-//            Log.d($"|\t firstRealizedChildTop calcualted = {firstRealizedChildTop}");
-//            Log.d($"|\t topOfFirstChild = {topOfFirstChild}");
-
-            var childTopBottoms = new List<double> { _initialTopOfFirstElement + OffsetFromInitialPosition };
+            var childTops = new List<double> { _initialTopOfFirstElement + OffsetFromInitialPosition };
 
             // Virtualized items and realized items
             int allItemsCount = GetParentItemsControl().Items.Count;
             for (var i = 1; i <= allItemsCount; ++i)
             {
-                double topOfLastChild = childTopBottoms[i - 1];
-                childTopBottoms.Add(topOfLastChild + ChildHeight);
+                double topOfLastChild = childTops[i - 1];
+                childTops.Add(topOfLastChild + ChildHeight);
             }
 
-            return childTopBottoms;
+            return childTops;
+        }
+
+        private double GetItemTopOffset(int index)
+        {
+            double firstItemTopOffset = _initialTopOfFirstElement + OffsetFromInitialPosition;
+            return firstItemTopOffset + ChildHeight * index;
         }
 
 
