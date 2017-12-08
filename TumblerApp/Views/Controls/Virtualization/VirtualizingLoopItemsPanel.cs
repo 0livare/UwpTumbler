@@ -19,17 +19,17 @@ namespace TumblerApp.Views.Controls.Virtualization
         private Size _finalSizeOfThisPanel;
 
         private int _childCount;
-        protected override int ChildCount
-        {
-            get
-            {
-                if (_childCount == 0)
-                {
-                    _childCount = GetParentItemsControl().Items.Count;
-                }
-                return _childCount;
-            }
-        }
+        protected override int ChildCount => GetAllItemsCount();
+        //        {
+        //            get
+        //            {
+        //                if (_childCount == 0)
+        //                {
+        //                    _childCount = GetAllItemsCount();
+        //                }
+        //                return _childCount;
+        //            }
+        //        }
 
         protected override int ShownChildCount => GetRealizedItemCount();
 
@@ -148,7 +148,7 @@ namespace TumblerApp.Views.Controls.Virtualization
             VirtualizeRange(0, RealizationRange.Start);
 
             // Virtualize all items that come after the realization range
-            ItemsControl owner = ItemsControl.GetItemsOwner(this);
+            ItemsControl owner = GetParentItemsControl();
             int numItemsToVirtualizeAtEnd = owner.Items.Count - RealizationRange.End - 1;
             VirtualizeRange(RealizationRange.End + 1, numItemsToVirtualizeAtEnd);
 
@@ -158,24 +158,12 @@ namespace TumblerApp.Views.Controls.Virtualization
             return finalSize;
         }
 
-//        private double GetInitialTopOffsetOfFirstElem()
-//        {
-//            int firstRealizedChildIndex = GetFirstRealizedIndex();
-//            UIElement firstRealizedChild = Children[0];
-//            Rect firstRealizedChildBounds = GetChildBoundsInThisPanel(firstRealizedChild);
-//
-//            double missingElementsHeight = firstRealizedChildIndex * ChildHeight;
-//            double firstRealizedChildTop = firstRealizedChildBounds.Y - missingElementsHeight + OffsetFromInitialPosition;
-//            return firstRealizedChildTop - missingElementsHeight;
-//        }
-
-
         protected override void OnScrolled(double movedBy)
         {
             base.OnScrolled(movedBy);
 
             Log.i($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
-            CalculateIndicesInRange(GetItemsTopOffsets(), 0, 700);
+            //CalculateIndicesInRange(GetItemsTopOffsets(), 0, 700); // For logging only
 
 
             double movedBySinceLastCalculation = Math.Abs(OffsetFromInitialPosition - _lastCalculatedRealizationRangeAtOffset);
@@ -222,7 +210,7 @@ namespace TumblerApp.Views.Controls.Virtualization
             }
 
 
-            int maxIndex = GetParentItemsControl().Items.Count;
+            int maxIndex = GetAllItemsCount();
             foreach (IndexRange range in new[] { toBeRealized, toBeVirtualized })
             {
                 if (range.Start < 0) range.Start = 0;
@@ -237,15 +225,9 @@ namespace TumblerApp.Views.Controls.Virtualization
         }
 
 
-        private bool IsVirtualizedAt(int index)
-        {
-            GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(index);
-            return pos.Offset != 0;
-        }
-
-
         private void VirtualizeRange(int startIndex, int count)
         {
+            return;
             if (count <= 0) return;
             GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(startIndex);
 
@@ -272,6 +254,7 @@ namespace TumblerApp.Views.Controls.Virtualization
 
         private void RealizeRange(int startIndex, int count)
         {
+            return;
             if (count <= 0) return;
 
             GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(startIndex);
@@ -282,9 +265,9 @@ namespace TumblerApp.Views.Controls.Virtualization
                 int itemsControlIndex = startIndex + i;
                 pos = ItemContainerGenerator.GeneratorPositionFromIndex(itemsControlIndex);
 
-                if (pos.Offset == 0)
+                if (!IsPositionVirtualized(pos))
                 {
-                    Log.e($"Position {(startIndex + i)} has an offset of ZERO!? -- skipping");
+                    Log.e($"Position {startIndex + i} is already realized!? -- skipping");
                     continue;
                 }
 
@@ -389,7 +372,7 @@ namespace TumblerApp.Views.Controls.Virtualization
             var childTops = new List<double> { _initialTopOfFirstElement + OffsetFromInitialPosition };
 
             // Both virtualized items and realized items
-            int allItemsCount = GetParentItemsControl().Items.Count;
+            int allItemsCount = GetAllItemsCount();
 
             for (var i = 1; i <= allItemsCount; ++i)
             {
@@ -406,12 +389,22 @@ namespace TumblerApp.Views.Controls.Virtualization
             return firstItemTopOffset + ChildHeight * index;
         }
 
+        private bool IsVirtualizedAt(int index)
+        {
+            GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(index);
+            return IsPositionVirtualized(pos);
+        }
+
+        private bool IsPositionVirtualized(GeneratorPosition pos)
+        {
+            return pos.Offset != 0;
+        }
 
         private int GetFirstRealizedIndex()
         {
-            ItemsControl itemsControl = GetParentItemsControl();
+            int allItemsCount = GetAllItemsCount();
 
-            for (var i = 0; i < itemsControl.Items.Count; ++i)
+            for (var i = 0; i < allItemsCount; ++i)
             {
                 if (!IsVirtualizedAt(i)) return i;
             }
@@ -424,12 +417,16 @@ namespace TumblerApp.Views.Controls.Virtualization
             return ItemsControl.GetItemsOwner(this);
         }
 
+        /// <summary>Count of virtualized items + realized items</summary>
+        private int GetAllItemsCount()
+        {
+            return GetParentItemsControl().Items.Count;
+        }
+
         private int GetRealizedItemCount()
         {
-            ItemsControl itemsControl = GetParentItemsControl();
             int realizedItemCount = 0;
-
-            for (int i = 0; i < itemsControl.Items.Count; i++)
+            for (int i = 0; i < GetAllItemsCount(); i++)
             {
                 if (!IsVirtualizedAt(i)) realizedItemCount++;
             }

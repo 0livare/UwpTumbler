@@ -333,11 +333,13 @@ namespace TumblerApp.Views.Controls
 
             /* The absolute top or bottom of the list.  An offset greater than this will
              * scroll beyond all items */
-            double offsetToEndOfList = ChildHeight * (ChildCount - 1) / 2;
+            double offsetToEndOfList = ChildHeight * (ChildCount - 1);
 
             // Prevent scrolling too far past end of items
             double currentOffset = Math.Abs(OffsetFromInitialPosition + offsetDelta);
-            double maxAllowedOffset = offsetToEndOfList + AllowedDistancePastEnd;
+
+            // When movind down the list, the offset is negative
+            double maxAllowedOffset = offsetToEndOfList + AllowedDistancePastEnd * -1;
 
             //Log.d($"\t offsetDelta = {offsetDelta}");
             //Log.d($"\t OffsetFromInitialPosition = {OffsetFromInitialPosition}");
@@ -353,7 +355,9 @@ namespace TumblerApp.Views.Controls
 
             if (_hasScrolledPastEnd)
             {
-                Log.e($"HAS SCROLLED PAST END => The current offset of {(int)currentOffset} is > the max of {maxAllowedOffset} based on {ShownChildCount} children");
+                Log.e($"HAS SCROLLED PAST END => The current offset of {(int)currentOffset} " +
+                      $"is > the max of {maxAllowedOffset} based on {ShownChildCount} children " +
+                      $"with a height of {ChildHeight}");
 
                 /* Inertia at the end of the list leads to a very slow feeling.
                  * It takes quite awhile for the inertia to finish, so even though
@@ -381,7 +385,7 @@ namespace TumblerApp.Views.Controls
                 return;
             }
 
-            _hasScrolledPastEnd = currentOffset > maxAllowedOffset;
+            _hasScrolledPastEnd = currentOffset < 0 || currentOffset > maxAllowedOffset;
             UpdatePositions(offsetDelta);
             OnScrolled(offsetDelta);
 
