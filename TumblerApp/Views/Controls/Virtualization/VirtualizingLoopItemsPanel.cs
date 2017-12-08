@@ -129,11 +129,6 @@ namespace TumblerApp.Views.Controls.Virtualization
                 {
                     child.RenderTransform = new TranslateTransform();
                 }
-                else
-                {
-                    var translate = (TranslateTransform)child.RenderTransform;
-                    translate.Y = 0;
-                }
 
                 positionTop += childDesiredSize.Height;
             }
@@ -204,6 +199,7 @@ namespace TumblerApp.Views.Controls.Virtualization
                 toBeRealized = new IndexRange(
                     oldRealizationRange.End + 1,
                     currentRealizationRange.End);
+
                 toBeVirtualized = new IndexRange(
                     oldRealizationRange.Start,
                     currentRealizationRange.Start - 1);
@@ -219,15 +215,14 @@ namespace TumblerApp.Views.Controls.Virtualization
 
             _isInsertingOrRemovingChildren = true;
             RealizeRange(toBeRealized.Start, toBeRealized.Length);
-            //VirtualizeRange(toBeVirtualized.Start, toBeVirtualized.Length);
+            VirtualizeRange(toBeVirtualized.Start, toBeVirtualized.Length, isMovingTowardTop);
 
             RealizationRange = currentRealizationRange;
         }
 
 
-        private void VirtualizeRange(int startIndex, int count)
+        private void VirtualizeRange(int startIndex, int count, bool isMovingTowardTop=true)
         {
-            return;
             if (count <= 0) return;
             GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(startIndex);
 
@@ -245,16 +240,30 @@ namespace TumblerApp.Views.Controls.Virtualization
                 Children.RemoveAt(i);
             }
 
+            double verticalCompensation = ChildHeight * count;
+            foreach (UIElement child in Children)
+            {
+                var translate = (TranslateTransform)child.RenderTransform;
+                if (translate == null) continue;
+
+                if (!isMovingTowardTop)
+                {
+                    translate.Y += verticalCompensation;
+
+                    Log.d($"^^^^ Moving all items downward by {verticalCompensation} to compensate for virtualization");
+                }
+
+            }
+
             // This will actually virtualize the children
             ItemContainerGenerator.Remove(pos, count);
 
-            Log.d($"Just virtualized {count} items starting at index {startIndex}");
+            Log.e($"Just virtualized {count} items starting at index {startIndex}");
             DumpGeneratorContent();
         }
 
         private void RealizeRange(int startIndex, int count)
         {
-            return;
             if (count <= 0) return;
 
             GeneratorPosition pos = ItemContainerGenerator.GeneratorPositionFromIndex(startIndex);
@@ -290,7 +299,7 @@ namespace TumblerApp.Views.Controls.Virtualization
             // Adding an item has moved all other items, account for that here
             MoveAllRealizedItemsBy(ChildHeight * count);
 
-            Log.d($"Just realized {count} items starting at index {startIndex}");
+            Log.e($"Just realized {count} items starting at index {startIndex}");
             DumpGeneratorContent();
         }
 

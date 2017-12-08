@@ -473,8 +473,6 @@ namespace TumblerApp.Views.Controls
             }
         }
 
-
-
         protected virtual void OnManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs args)
         {
             //Log.d($"------- Manipulation completed");
