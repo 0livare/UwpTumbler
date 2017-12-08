@@ -18,6 +18,21 @@ namespace TumblerApp.Views.Controls.Virtualization
         private double _initialTopOfFirstElement;
         private Size _finalSizeOfThisPanel;
 
+        private int _childCount;
+        protected override int ChildCount
+        {
+            get
+            {
+                if (_childCount == 0)
+                {
+                    _childCount = GetParentItemsControl().Items.Count;
+                }
+                return _childCount;
+            }
+        }
+
+        protected override int ShownChildCount => GetRealizedItemCount();
+
         #region Virtualization Core
         public ItemContainerGenerator ItemContainerGenerator
         {
@@ -407,6 +422,19 @@ namespace TumblerApp.Views.Controls.Virtualization
         private ItemsControl GetParentItemsControl()
         {
             return ItemsControl.GetItemsOwner(this);
+        }
+
+        private int GetRealizedItemCount()
+        {
+            ItemsControl itemsControl = GetParentItemsControl();
+            int realizedItemCount = 0;
+
+            for (int i = 0; i < itemsControl.Items.Count; i++)
+            {
+                if (!IsVirtualizedAt(i)) realizedItemCount++;
+            }
+
+            return realizedItemCount;
         }
         #endregion HelperMethods
 

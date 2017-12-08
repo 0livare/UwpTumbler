@@ -84,8 +84,8 @@ namespace TumblerApp.Views.Controls
         public double BelowCenterChild => ActualHeight / 2 + ChildHeight / 2;
 
         /// <summary>The number of children this panel currently has</summary>
-        private int ChildCount => Children?.Count ?? 0;
-        private int ShownChildCount => (ChildrenToShow < 1) ? ChildCount : ChildrenToShow;
+        protected virtual int ChildCount => Children?.Count ?? 0;
+        protected virtual int ShownChildCount => (ChildrenToShow < 1) ? ChildCount : ChildrenToShow;
         #endregion Properties
 
         #region Layout
@@ -353,6 +353,8 @@ namespace TumblerApp.Views.Controls
 
             if (_hasScrolledPastEnd)
             {
+                Log.e($"HAS SCROLLED PAST END => The current offset of {(int)currentOffset} is > the max of {maxAllowedOffset} based on {ShownChildCount} children");
+
                 /* Inertia at the end of the list leads to a very slow feeling.
                  * It takes quite awhile for the inertia to finish, so even though
                  * the snap back is quick, it gives a laggy feeling to the control.
@@ -404,7 +406,7 @@ namespace TumblerApp.Views.Controls
             if (!ShouldLoopChildren)
             {
                 // Update all items to new offset
-                UpdatePositionsForIndices(0, ChildCount, OffsetFromInitialPosition);
+                UpdatePositionsForIndices(0, ShownChildCount, OffsetFromInitialPosition);
                 return;
             }
 
@@ -442,7 +444,7 @@ namespace TumblerApp.Views.Controls
             }
 
             // Items that must be before
-            UpdatePositionsForIndices(indexToMove, ChildCount, offsetBefore);
+            UpdatePositionsForIndices(indexToMove, ShownChildCount, offsetBefore);
 
             // Items that must be after
             UpdatePositionsForIndices(0, indexToMove, offsetAfter);
@@ -453,7 +455,7 @@ namespace TumblerApp.Views.Controls
         /// </summary>
         protected void UpdatePositionsForIndices(int startIndex, int endIndex, double offset)
         {
-            for (int i = startIndex; i < endIndex; ++i)
+            for (int i = startIndex; i < Math.Min(endIndex, ShownChildCount); ++i)
             {
                 UIElement child = Children[i];
 
