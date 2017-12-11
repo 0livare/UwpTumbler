@@ -6,6 +6,7 @@ using Windows.Foundation;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
+using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using TumblerApp.Util;
 using TumblerApp.ViewModels;
@@ -85,6 +86,9 @@ namespace TumblerApp.Views.Controls.Virtualization
 
         protected override Size ArrangeOverride(Size finalSize)
         {
+            Log.e($"ArrangeOverride: final size is {finalSize}, {_isInsertingOrRemovingChildren}");
+
+
             _initialTopOfFirstElement = 0;
             double positionTop = _initialTopOfFirstElement;
 
@@ -95,18 +99,18 @@ namespace TumblerApp.Views.Controls.Virtualization
 
 //                positionTop = tops[index];
 
-                Log.d($"-------- INSERTING: Setting index {index} to have a top offset of {positionTop}");
+                Log.d($"    INSERTING: Setting index {index} to have a top offset of {positionTop}");
             };
 
             _finalSizeOfThisPanel = finalSize;
-            Log.e($"ArrangeOverride: final size is {finalSize}, {_isInsertingOrRemovingChildren}");
-
 
             /////// Stolen from parent class
             Clip = new RectangleGeometry { Rect = new Rect(0, 0, finalSize.Width, finalSize.Height) };
 
 
             // Must Create looping items count
+            Log.d($"    Children transform offsets:");
+            int i = 0;
             foreach (UIElement child in Children)
             {
                 if (child == null) continue;
@@ -131,8 +135,13 @@ namespace TumblerApp.Views.Controls.Virtualization
                 }
                 else
                 {
+                    // Something is setting all the child offsets to the value of a single child height
+
+
                     var translate = (TranslateTransform)child.RenderTransform;
-                    translate.Y = 0;
+                    translate.Y = OffsetFromInitialPosition;
+
+                    Log.d($"        {i++} = {translate.Y}");
                 }
 
                 positionTop += childDesiredSize.Height;
@@ -170,32 +179,35 @@ namespace TumblerApp.Views.Controls.Virtualization
 //        }
 
 
-        protected override void OnScrolled(double movedBy)
+        private double _lastManipulationCompletedOffset = -1;
+        protected override void OnManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs args)
         {
-            base.OnScrolled(movedBy);
+            base.OnManipulationCompleted(sender, args);
 
-            Log.i($"OffsetFromInitialPosition = {OffsetFromInitialPosition}");
-            CalculateIndicesInRange(GetItemsTopOffsets(), 0, 700);
+            if (OffsetFromInitialPosition == _lastManipulationCompletedOffset) return;
+            _lastManipulationCompletedOffset = OffsetFromInitialPosition;
 
+            Log.i("OnManipulationCompleted:");
+            Log.i($"    OffsetFromInitialPosition = {OffsetFromInitialPosition}");
 
             double movedBySinceLastCalculation = Math.Abs(OffsetFromInitialPosition - _lastCalculatedRealizationRangeAtOffset);
-            double increment = ChildHeight / 2;
+            double increment = ChildHeight;
             //Log.d($"\t Moved by {movedBySinceLastCalculation} (waiting for {increment})");
 
             if (movedBySinceLastCalculation < increment) return;
-            Log.d($"----- Moved by more than half the actual height ({(int)movedBySinceLastCalculation}) to {(int)OffsetFromInitialPosition}");
+            Log.d($"    Moved by more than a child height ({(int)movedBySinceLastCalculation}) to {(int)OffsetFromInitialPosition}");
 
             IndexRange oldRealizationRange = RealizationRange;
             IndexRange currentRealizationRange = CalculateCurrentRealizationRange();
 
-            Log.d($"----- OldRange: {oldRealizationRange}, NewRange: {currentRealizationRange}");
+            Log.d($"    OldRange: {oldRealizationRange}, NewRange: {currentRealizationRange}");
             if (oldRealizationRange.Equals(currentRealizationRange)) return;
 
             bool isMovingTowardTop =
                 currentRealizationRange.Start < oldRealizationRange.Start ||
                 currentRealizationRange.End   < oldRealizationRange.End;
 
-            Log.d($"----- isMovingTowardTop = {isMovingTowardTop}");
+            Log.d($"    isMovingTowardTop = {isMovingTowardTop}");
 
             IndexRange toBeRealized;
             IndexRange toBeVirtualized;
@@ -231,7 +243,7 @@ namespace TumblerApp.Views.Controls.Virtualization
 
             _isInsertingOrRemovingChildren = true;
             RealizeRange(toBeRealized.Start, toBeRealized.Length);
-            //VirtualizeRange(toBeVirtualized.Start, toBeVirtualized.Length);
+            VirtualizeRange(toBeVirtualized.Start, toBeVirtualized.Length);
 
             RealizationRange = currentRealizationRange;
         }
@@ -266,7 +278,7 @@ namespace TumblerApp.Views.Controls.Virtualization
             // This will actually virtualize the children
             ItemContainerGenerator.Remove(pos, count);
 
-            Log.d($"Just virtualized {count} items starting at index {startIndex}");
+            Log.e($"Just virtualized {count} items starting at index {startIndex}");
             DumpGeneratorContent();
         }
 
@@ -296,7 +308,7 @@ namespace TumblerApp.Views.Controls.Virtualization
                 PrintValue(child);
 
                 var uielem = (UIElement)child;
-                uielem.RenderTransform = new TranslateTransform { Y = 0 };
+                uielem.RenderTransform = new TranslateTransform { Y = OffsetFromInitialPosition };
 
                 int insertionIndex = pos.Index + pos.Offset;
                 Children.Insert(insertionIndex, child as UIElement);
@@ -305,9 +317,9 @@ namespace TumblerApp.Views.Controls.Virtualization
             ItemContainerGenerator.Stop();
 
             // Adding an item has moved all other items, account for that here
-            MoveAllRealizedItemsBy(ChildHeight * count);
+            //MoveAllRealizedItemsBy(ChildHeight * count);
 
-            Log.d($"Just realized {count} items starting at index {startIndex}");
+            Log.e($"Just realized {count} items starting at index {startIndex}");
             DumpGeneratorContent();
         }
 
@@ -320,7 +332,7 @@ namespace TumblerApp.Views.Controls.Virtualization
         #region Range Calculation
         private IndexRange CalculateCurrentRealizationRange()
         {
-            double realizationHeight = ActualHeight * 1;
+            double realizationHeight = ActualHeight * 3;
             double heightOfThisPanel = _finalSizeOfThisPanel.Height;
 
             double realizationRangeTopOffset    = heightOfThisPanel / 2 - realizationHeight / 2;
